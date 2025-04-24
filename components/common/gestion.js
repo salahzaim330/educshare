@@ -59,7 +59,7 @@
  function supprimerCategorie(id) {
      if (confirm('Êtes-vous sûr de vouloir supprimer cette catégorie?')) {
          // Rediriger vers supp_categorie.php avec l'ID
-         window.location.href = `supp_categorie.php?id=${id}`;
+         window.location.href = `.../includes/supprimer/supp_categorie.php?id=${id}`;
      }
  }
  
@@ -70,7 +70,7 @@
  function supprimerSousCategorie(id) {
      if (confirm('Êtes-vous sûr de vouloir supprimer cette sous-catégorie?')) {
          // Rediriger vers supp_s_categorie.php avec l'ID
-         window.location.href = `supp_s_categorie.php?id=${id}`;
+         window.location.href = `.../includes/supprimer/supp_s_categorie.php?id=${id}`;
      }
  }
  
@@ -81,6 +81,6 @@
  function supprimerUtilisateur(id) {
      if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur?')) {
          // Rediriger vers supp_utilisateur.php avec l'ID
-         window.location.href = `supp_utilisateur.php?id=${id}`;
+         window.location.href = `.../includes/supprimer/supp_utilisateur.php?id=${id}`;
      }
  }

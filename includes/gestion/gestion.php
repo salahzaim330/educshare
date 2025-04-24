@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                     ?>
                                     </td>
                                         <td>
-                                        <a href="supprimer/supp_categorie.php?id=<?php echo htmlspecialchars($cat['id_categorie']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a>
+                                        <a href="includes/supprimer/supp_categorie.php?id=<?php echo htmlspecialchars($cat['id_categorie']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a>
 
                                         </td>
                                     </tr>
@@ -247,7 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                     </td>
                                         <td><?php echo htmlspecialchars($scat['description']); ?></td>
                                         <td>
-                                        <a href="supprimer/supp_sous_categorie.php?id=<?php echo htmlspecialchars($scat['id_s_categorie']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a>
+                                        <a href="includes/supprimer/supp_sous_categorie.php?id=<?php echo htmlspecialchars($scat['id_s_categorie']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a>
 
                                         </td>
                                     </tr>
@@ -310,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         <td><?php echo htmlspecialchars($etud['nom']); ?></td>
                                         <td><?php echo htmlspecialchars($etud['email']) ?></td>
                                         <td>etudiant</td>
-                                        <td><a href="supprimer/supp_etudiant.php?id=<?php echo htmlspecialchars($etud['id']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a></td>
+                                        <td><a href="includes/supprimer/supp_etudiant.php?id=<?php echo htmlspecialchars($etud['id']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a></td>
                                     </tr>
                                     <?php endforeach; ?>
                                     
@@ -383,7 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </div>
 
     <script
-        src="assets/js/gestion.js">
+        src=".../components/common/gestion.js">
     </script>
 </body>
 </html>
