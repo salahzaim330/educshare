@@ -1,7 +1,7 @@
 <?php
 session_start();
-require 'db.php';
-require 'auth.php';
+require '.../auth/db.php';
+require '.../auth/auth.php';
 
 
 ?>

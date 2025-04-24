@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $_SESSION['prenom']=$enseignant['prenom'];
         $_SESSION['id'] = $enseignant['id'];
         $_SESSION['email'] = $enseignant['email'];
-        header('Location: tableau_bord_enseignant.php');
+        header('Location: ../pages/enseignant/tableau_bord.php');
         exit;
     }
 
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $_SESSION['id'] = $etudiant['id'];
         $_SESSION['email'] = $etudiant['email'];
         $_SESSION['prenom']=$etudiant['prenom'];
-        header('Location: tableau_bord_etudiant.php');
+        header('Location: ../pages/etudiant/tableau_bord.php');
         exit;
     }
 
@@ -56,13 +56,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <!-- Font Awesome pour les icônes -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/login.css">
+    <link rel="stylesheet" href="../assets/css/login.css">
 </head>
 <body>
     <!-- En-tête -->
     <div class="header">
         <div class="logo">
-            <a href="index.html">
+            <a href="../index.html">
                 <i class="fas fa-book"></i> EduShare
             </a>
         </div>

@@ -60,13 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <!-- Font Awesome pour les icônes -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/signup.css">
+    <link rel="stylesheet" href="../assets/css/signup.css">
 </head>
 <body>
     <!-- En-tête -->
     <div class="header">
         <div class="logo">
-            <a href="index.html">
+            <a href="../index.html">
                 <i class="fas fa-book"></i> EduShare
             </a>
         </div>
