@@ -1,0 +1,133 @@
+body {
+    background-color: #e6f4ea;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+.header .logo {
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+.header .buttons button {
+    margin-left: 15px;
+    font-size: 1rem;
+    padding: 8px 15px;
+}
+.main-content {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 70px);
+    padding: 40px;
+    text-align: center;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+.text-section {
+    max-width: 600px;
+    padding: 20px;
+}
+.text-section h1 {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 25px;
+}
+.text-section p {
+    font-size: 1.2rem;
+    color: #666;
+    margin-bottom: 40px;
+}
+.image-section {
+    width: 100%;
+    max-width: 400px;
+    height: 450px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+.image-placeholder {
+    width: 60px;
+    height: 60px;
+    background-color: #ddd;
+    border-radius: 50%;
+}
+.btn-commencer {
+    background-color: #000;
+    color: #fff;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1rem;
+}
+
+/* Ajustements pour écrans moyens et grands */
+@media (min-width: 768px) {
+    .main-content {
+        flex-wrap: nowrap;
+        text-align: left;
+    }
+    .text-section h1 {
+        font-size: 3.5rem;
+    }
+    .text-section p {
+        font-size: 1.3rem;
+    }
+    .image-section {
+        margin-left: 60px;
+        margin-top: 0;
+    }
+}
+
+/* Ajustements spécifiques pour 1920x1080 */
+@media (min-width: 1200px) and (max-width: 1920px) {
+    .main-content {
+        padding: 60px;
+    }
+    .text-section {
+        max-width: 700px;
+    }
+    .image-section {
+        max-width: 500px;
+        height: 550px;
+    }
+}
+
+/* Ajustements pour petits écrans */
+@media (max-width: 576px) {
+    .header {
+        padding: 10px 20px;
+    }
+    .header .logo {
+        font-size: 1.2rem;
+    }
+    .header .buttons button {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+    .text-section h1 {
+        font-size: 1.5rem;
+    }
+    .text-section p {
+        font-size: 0.9rem;
+    }
+    .btn-commencer {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+    .image-section {
+        max-width: 100px;
+        height: 100px;
+    }
+}

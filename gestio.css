@@ -1,0 +1,100 @@
+body {
+    background-color: #f8f9fa;
+    font-family: Arial, sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.header .logo {
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+.header nav a, .header nav span {
+    color: #666;
+    text-decoration: none;
+    margin-right: 15px;
+}
+
+.header nav span {
+    color: #000;
+    font-weight: bold;
+}
+
+.header .user-info {
+    display: flex;
+    align-items: center;
+}
+
+.header .user-info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.main-content {
+    padding: 40px;
+}
+
+.tabs {
+    margin-bottom: 20px;
+}
+
+.tabs .nav-link {
+    color: #666;
+}
+
+.tabs .nav-link.active {
+    color: #000;
+    font-weight: bold;
+    border-bottom: 2px solid #000;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: none;
+}
+
+.btn-add {
+    background-color: #000;
+    color: #fff;
+    padding: 8px 15px;
+    border-radius: 5px;
+}
+
+.btn-add:hover {
+    color: #fff;
+    text-decoration: none;
+}
+
+@media (max-width: 576px) {
+    .header {
+        padding: 10px 20px;
+    }
+
+    .header .logo {
+        font-size: 1.2rem;
+    }
+
+    .main-content {
+        padding: 20px;
+    }
+
+    .header nav a, .header nav span {
+        font-size: 0.9rem;
+        margin-right: 10px;
+    }
+}
