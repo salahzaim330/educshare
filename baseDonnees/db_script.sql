@@ -56,6 +56,7 @@ CREATE TABLE Publication (
     titre VARCHAR(255),
     date_pub DATE,
     contenu VARCHAR(255);
+    note FLOAT,
     id_enseignant INT,
     id_etudiant INT,
     id_s_categorie INT,
