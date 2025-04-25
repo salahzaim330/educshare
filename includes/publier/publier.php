@@ -1,7 +1,7 @@
 <?php
 session_start();
-require 'db.php';
-require 'auth.php';
+require_once '../../auth/db.php';
+require_once '../../auth/auth.php';
 $tableau = ($_SESSION['user_type'] === 'etudiant') 
 ? 'tableau_bord_etudiant.php' 
 : 'tableau_bord_enseignant.php';
@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                     <nav className="flex gap-4">
                         <a href="<?= $tableau ?>" class="text-gray-700 hover:font-bold">Tableau de bord</a>                        <a href="categorie.html" className="text-gray-700 hover:font-bold">Catégories</a>
-                        <a href="gestion.php" className="text-gray-700 hover:font-bold">gestion</a>
+                        
                     </nav>
                     <div className="flex items-center gap-2">
                         <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>

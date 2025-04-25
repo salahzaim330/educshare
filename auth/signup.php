@@ -108,10 +108,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <label for="study-level">Niveau d'étude</label>
                 <select name="niveau" id="study-level" required>
                     <option value="" disabled selected>Sélectionnez votre niveau</option>
-                    <option value="primaire">Primaire</option>
-                    <option value="college">Collège</option>
-                    <option value="lycee">Lycée</option>
-                    <option value="universite">Université</option>
+                    <option value="Classe preparatoir 1">Classe preparatoir 1 (CP1)</option>
+                    <option value="Classe preparatoir 2">Classe preparatoir 2 (CP2)</option>
+                    <option value="2ITE">2ITE</option>
+                    <option value="CCN">CCN</option>
+                    <option value="ISIC">ISIC</option>
                 </select>
             </div>
             <button class="btn-signup">S'inscrire</button>
