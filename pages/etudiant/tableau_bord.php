@@ -60,7 +60,7 @@ require '../../auth/auth.php';
                     
                     <a href="#">Mes publications</a>
                 </nav>
-                <a href="publier.php" class="publish-btn"><span>⬆</span> Publier une ressource</a>
+                <a href="../../includes/publier/publier.php" class="publish-btn"><span>⬆</span> Publier une ressource</a>
             </div>
 
             <div class="resources">
