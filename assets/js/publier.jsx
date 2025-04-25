@@ -1,19 +1,21 @@
 // Header Component
-const Header = () => {
+// Header Component
+const Header = ({ tableau, userData }) => {
     return (
         <header className="bg-white border-b p-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
                 <span className="menu-icon text-2xl">☰</span>
-                <span className="text-xl font-bold"><a href="<?= $tableau ?>"> EduShare</a></span>
+                <span className="text-xl font-bold"><a href={tableau}>EduShare</a></span>
             </div>
             <nav className="flex gap-4">
-                <a href="<?= $tableau ?>" class="text-gray-700 hover:font-bold">Tableau de bord</a>                        <a href="categorie.html" className="text-gray-700 hover:font-bold">Catégories</a>
-                <a href="gestion.php" className="text-gray-700 hover:font-bold">gestion</a>
+                <a href={tableau} className="text-gray-700 hover:font-bold">Tableau de bord</a>
+                <a href="categorie.html" className="text-gray-700 hover:font-bold">Catégories</a>
+                <a href="gestion.php" className="text-gray-700 hover:font-bold">Gestion</a>
             </nav>
             <div className="flex items-center gap-2">
                 <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>
-                <span className="font-bold"><?php echo htmlspecialchars($_SESSION['prenom']. ' ' . $_SESSION['username']) ?></span>
-                <span className="text-gray-500"><?php echo htmlspecialchars($_SESSION['user_type']) ?></span>
+                <span className="font-bold">{userData.prenom} {userData.username}</span>
+                <span className="text-gray-500">{userData.user_type}</span>
             </div>
         </header>
     );

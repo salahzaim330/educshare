@@ -3,8 +3,8 @@ session_start();
 require_once '../../auth/db.php';
 require_once '../../auth/auth.php';
 $tableau = ($_SESSION['user_type'] === 'etudiant') 
-? 'tableau_bord_etudiant.php' 
-: 'tableau_bord_enseignant.php';
+? '../../pages/etudiant/tableau_bord.php' 
+: '../../pages/enseignant/tableau_bord.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $titre = $_POST['titre'];
