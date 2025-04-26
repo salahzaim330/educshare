@@ -29,7 +29,7 @@ try {
 
     $stmt = $connexion->query("
         SELECT s.id_s_categorie, s.nom AS sous_categorie, s.id_categorie
-        FROM Sous_categorie s
+        FROM sous_categorie s
         ORDER BY s.nom
     ");
     $subcategories = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -145,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Insert publication
     try {
         $stmt = $connexion->prepare("
-            INSERT INTO Publication 
+            INSERT INTO publication 
             (titre, date_pub, contenu, description, id_enseignant, id_etudiant, id_s_categorie)
             VALUES (:titre, NOW(), :contenu, :description, :id_enseignant, :id_etudiant, :id_s_categorie)
         ");
@@ -193,245 +193,242 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div id="root"></div>
 
     <script type="text/babel">
-        // Header Component
-        const Header = () => {
-            const userName = <?php echo json_encode(htmlspecialchars($_SESSION['prenom'] . ' ' . $_SESSION['username'])); ?>;
-            const userType = <?php echo json_encode(htmlspecialchars($_SESSION['user_type'])); ?>;
-            const dashboard = <?php echo json_encode($dashboard); ?>;
+    // Header Component
+    const Header = () => {
+        const userName = <?php echo json_encode(htmlspecialchars($_SESSION['prenom'] . ' ' . $_SESSION['username'])); ?>;
+        const userType = <?php echo json_encode(htmlspecialchars($_SESSION['user_type'])); ?>;
+        const dashboard = <?php echo json_encode($dashboard); ?>;
 
-            return (
-                <header className="bg-white border-b p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <span className="menu-icon text-2xl">☰</span>
-                        <a href={dashboard} className="text-xl font-bold">EduShare</a>
-                    </div>
-                    <nav className="flex gap-4">
-                        <a href={dashboard} className="text-gray-700 hover:font-bold">Tableau de bord</a>
-                        <a href="categories.php" className="text-gray-700 hover:font-bold">Catégories</a>
-                      
-                    </nav>
-                    <div className="flex items-center gap-2">
-                        <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>
-                        <span className="font-bold">{userName}</span>
-                        <span className="text-gray-500">{userType}</span>
-                    </div>
-                </header>
-            );
-        };
+        return (
+            <header className="bg-white border-b p-4 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <span className="menu-icon text-2xl">☰</span>
+                    <a href={dashboard} className="text-xl font-bold">EduShare</a>
+                </div>
+                <nav className="flex gap-4">
+                    <a href={dashboard} className="text-gray-700 hover:font-bold">Tableau de bord</a>
+                    <a href="categories.php" className="text-gray-700 hover:font-bold">Catégories</a>
+                </nav>
+                <div className="flex items-center gap-2">
+                    <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>
+                    <span className="font-bold">{userName}</span>
+                    <span className="text-gray-500">{userType}</span>
+                </div>
+            </header>
+        );
+    };
 
-        // PublishForm Component
-        const PublishForm = () => {
-            const categories = <?php echo json_encode($categories); ?>;
-            const subcategories = <?php echo json_encode($subcategories); ?>;
-            const csrfToken = <?php echo json_encode(htmlspecialchars($_SESSION['csrf_token'])); ?>;
-            const dashboard = <?php echo json_encode($dashboard); ?>;
-            const [title, setTitle] = React.useState('');
-            const [description, setDescription] = React.useState('');
-            const [categoryId, setCategoryId] = React.useState(categories[0]?.id_categorie || '');
-            const [subcategoryId, setSubcategoryId] = React.useState('');
-            const [file, setFile] = React.useState(null);
-            const [fileName, setFileName] = React.useState('Aucun fichier sélectionné');
-            const [isSubmitting, setIsSubmitting] = React.useState(false);
-            const [error, setError] = React.useState('');
+    // PublishForm Component
+    const PublishForm = () => {
+        const categories = <?php echo json_encode($categories); ?>;
+        const subcategories = <?php echo json_encode($subcategories); ?>;
+        const csrfToken = <?php echo json_encode(htmlspecialchars($_SESSION['csrf_token'])); ?>;
+        const dashboard = <?php echo json_encode($dashboard); ?>;
+        const [title, setTitle] = React.useState('');
+        const [description, setDescription] = React.useState('');
+        const [categoryId, setCategoryId] = React.useState(categories[0]?.id_categorie || '');
+        const [subcategoryId, setSubcategoryId] = React.useState('');
+        const [file, setFile] = React.useState(null);
+        const [fileName, setFileName] = React.useState('Aucun fichier sélectionné');
+        const [isSubmitting, setIsSubmitting] = React.useState(false);
+        const [error, setError] = React.useState('');
 
-            // Update subcategory when category changes
-            React.useEffect(() => {
-                const firstSubcategory = subcategories.find(sub => sub.id_categorie === parseInt(categoryId));
-                setSubcategoryId(firstSubcategory?.id_s_categorie || '');
-            }, [categoryId]);
+        // Update subcategory when category changes
+        React.useEffect(() => {
+            if (categories.length > 0 && !categoryId) {
+                setCategoryId(categories[0].id_categorie);
+            }
+            const firstSubcategory = subcategories.find(sub => sub.id_categorie === parseInt(categoryId));
+            setSubcategoryId(firstSubcategory?.id_s_categorie || '');
+        }, [categoryId, categories, subcategories]);
 
-            const handleFileChange = (e) => {
-                const selectedFile = e.target.files[0];
-                if (selectedFile) {
-                    const extension = selectedFile.name.split('.').pop().toLowerCase();
-                    const allowedExtensions = ['pdf', 'docx', 'pptx', 'txt'];
-                    if (!allowedExtensions.includes(extension)) {
-                        setError('Type de fichier non autorisé. Formats acceptés : PDF, DOCX, PPTX, TXT.');
-                        setFile(null);
-                        setFileName('Aucun fichier sélectionné');
-                        return;
-                    }
-                    if (selectedFile.size > 20 * 1024 * 1024) {
-                        setError('Le fichier est trop volumineux. Taille maximale : 20 Mo.');
-                        setFile(null);
-                        setFileName('Aucun fichier sélectionné');
-                        return;
-                    }
-                    setError('');
-                    setFile(selectedFile);
-                    setFileName(selectedFile.name);
-                } else {
+        const handleFileChange = (e) => {
+            const selectedFile = e.target.files[0];
+            if (selectedFile) {
+                const extension = selectedFile.name.split('.').pop().toLowerCase();
+                const allowedExtensions = ['pdf', 'docx', 'pptx', 'txt'];
+                
+                if (!allowedExtensions.includes(extension)) {
+                    setError('Type de fichier non autorisé. Formats acceptés : PDF, DOCX, PPTX, TXT.');
                     setFile(null);
                     setFileName('Aucun fichier sélectionné');
-                }
-            };
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if (!title.trim() || !description.trim() || !subcategoryId || !file) {
-                    setError('Veuillez remplir tous les champs obligatoires.');
                     return;
                 }
-                setIsSubmitting(true);
-                // Form submission proceeds via native form submit
-            };
-
-            const handleCancel = () => {
-                if (window.confirm('Êtes-vous sûr de vouloir annuler ? Les données non enregistrées seront perdues.')) {
-                    window.location.href = dashboard;
+                
+                if (selectedFile.size > 20 * 1024 * 1024) {
+                    setError('Le fichier est trop volumineux. Taille maximale : 20 Mo.');
+                    setFile(null);
+                    setFileName('Aucun fichier sélectionné');
+                    return;
                 }
-            };
+                
+                setError('');
+                setFile(selectedFile);
+                setFileName(selectedFile.name);
+            } else {
+                setFile(null);
+                setFileName('Aucun fichier sélectionné');
+            }
+        };
 
-            return (
-                <main className="p-4">
-                    <div className="max-w-xl mx-auto">
-                        <div className="mb-4">
-                            <h1 className="text-2xl font-bold">Publier une ressource</h1>
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            if (!title.trim() || !description.trim() || !subcategoryId || !file) {
+                setError('Veuillez remplir tous les champs obligatoires.');
+                return;
+            }
+            setIsSubmitting(true);
+            e.target.submit();
+        };
+
+        const handleCancel = () => {
+            if (window.confirm('Êtes-vous sûr de vouloir annuler ? Les données non enregistrées seront perdues.')) {
+                window.location.href = dashboard;
+            }
+        };
+
+        return (
+            <main className="p-4">
+                <div className="max-w-xl mx-auto">
+                    <div className="mb-4">
+                        <h1 className="text-2xl font-bold">Publier une ressource</h1>
+                    </div>
+                    {error && (
+                        <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
+                            {error}
                         </div>
-                        <?php if (isset($_SESSION['error'])): ?>
-                            <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
-                                <?php echo htmlspecialchars($_SESSION['error']); ?>
+                    )}
+                    <div className="bg-white border border-gray-300 rounded-md p-4">
+                        <h2 className="text-lg font-bold uppercase mb-2">Informations sur la ressource</h2>
+                        <p className="text-gray-500 mb-4">Renseignez les détails de votre ressource pédagogique</p>
+                        <form action="publier.php" method="post" enctype="multipart/form-data" onSubmit={handleSubmit}>
+                            <input type="hidden" name="csrf_token" value={csrfToken} />
+                            <div className="mb-4">
+                                <label htmlFor="title" className="block text-sm font-medium mb-1">Titre</label>
+                                <input
+                                    type="text"
+                                    id="title"
+                                    name="titre"
+                                    className="w-full border border-gray-300 rounded-md p-2"
+                                    placeholder="Titre de votre ressource"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    disabled={isSubmitting}
+                                    required
+                                />
                             </div>
-                            <?php unset($_SESSION['error']); ?>
-                        <?php endif; ?>
-                        {error && (
-                            <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
-                                {error}
+
+                            <div className="mb-4">
+                                <label htmlFor="description" className="block text-sm font-medium mb-1">Description</label>
+                                <textarea
+                                    id="description"
+                                    name="description"
+                                    className="w-full border border-gray-300 rounded-md p-2"
+                                    placeholder="Décrivez votre ressource en quelques phrases..."
+                                    rows="3"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    disabled={isSubmitting}
+                                    required
+                                ></textarea>
                             </div>
-                        )}
-                        <div className="bg-white border border-gray-300 rounded-md p-4">
-                            <h2 className="text-lg font-bold uppercase mb-2">Informations sur la ressource</h2>
-                            <p className="text-gray-500 mb-4">Renseignez les détails de votre ressource pédagogique</p>
-                            <form action="publier.php" method="post" enctype="multipart/form-data" onSubmit={handleSubmit}>
-                                <input type="hidden" name="csrf_token" value={csrfToken} />
-                                <div className="mb-4">
-                                    <label htmlFor="title" className="block text-sm font-medium mb-1">Titre</label>
-                                    <input
-                                        type="text"
-                                        id="title"
-                                        name="titre"
+
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label htmlFor="category" className="block text-sm font-medium mb-1">Catégorie</label>
+                                    <select
+                                        id="category"
+                                        name="categorie"
                                         className="w-full border border-gray-300 rounded-md p-2"
-                                        placeholder="Titre de votre ressource"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
+                                        value={categoryId}
+                                        onChange={(e) => setCategoryId(e.target.value)}
+                                        disabled={isSubmitting}
+                                        required
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat.id_categorie} value={cat.id_categorie}>{cat.nom}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="subcategory" className="block text-sm font-medium mb-1">Sous-catégorie</label>
+                                    <select
+                                        id="subcategory"
+                                        name="sous_categorie"
+                                        className="w-full border border-gray-300 rounded-md p-2"
+                                        value={subcategoryId}
+                                        onChange={(e) => setSubcategoryId(e.target.value)}
+                                        disabled={isSubmitting}
+                                        required
+                                    >
+                                        <option value="">Sélectionnez une sous-catégorie</option>
+                                        {subcategories
+                                            .filter(sub => sub.id_categorie === parseInt(categoryId))
+                                            .map(sub => (
+                                                <option key={sub.id_s_categorie} value={sub.id_s_categorie}>{sub.sous_categorie}</option>
+                                            ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label htmlFor="file" className="block text-sm font-medium mb-1">Fichier</label>
+                                <div className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center bg-gray-50">
+                                    <input
+                                        type="file"
+                                        id="file"
+                                        name="file"
+                                        accept=".pdf,.docx,.pptx,.txt"
+                                        className="hidden"
+                                        onChange={handleFileChange}
                                         disabled={isSubmitting}
                                         required
                                     />
+                                    <label htmlFor="file" className="block mb-2 cursor-pointer">
+                                        {fileName}<br />
+                                        <span className="text-2xl">⬆</span><br />
+                                        Cliquez pour télécharger ou glissez-déposez
+                                    </label>
+                                    <p className="text-gray-500 text-sm">PDF, DOCX, PPTX, TXT (max. 20 Mo)</p>
                                 </div>
+                            </div>
 
-                                <div className="mb-4">
-                                    <label htmlFor="description" className="block text-sm font-medium mb-1">Description</label>
-                                    <textarea
-                                        id="description"
-                                        name="description"
-                                        className="w-full border border-gray-300 rounded-md p-2"
-                                        placeholder="Décrivez votre ressource en quelques phrases..."
-                                        rows="3"
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        disabled={isSubmitting}
-                                        required
-                                    ></textarea>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div>
-                                        <label htmlFor="category" className="block text-sm font-medium mb-1">Catégorie</label>
-                                        <select
-                                            id="category"
-                                            name="categorie"
-                                            className="w-full border border-gray-300 rounded-md p-2"
-                                            value={categoryId}
-                                            onChange={(e) => setCategoryId(e.target.value)}
-                                            disabled={isSubmitting}
-                                            required
-                                        >
-                                            <option value="">Sélectionnez une catégorie</option>
-                                            {categories.map(cat => (
-                                                <option key={cat.id_categorie} value={cat.id_categorie}>{cat.nom}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="subcategory" className="block text-sm font-medium mb-1">Sous-catégorie</label>
-                                        <select
-                                            id="subcategory"
-                                            name="sous_categorie"
-                                            className="w-full border border-gray-300 rounded-md p-2"
-                                            value={subcategoryId}
-                                            onChange={(e) => setSubcategoryId(e.target.value)}
-                                            disabled={isSubmitting}
-                                            required
-                                        >
-                                            <option value="">Sélectionnez une sous-catégorie</option>
-                                            {subcategories
-                                                .filter(sub => sub.id_categorie === parseInt(categoryId))
-                                                .map(sub => (
-                                                    <option key={sub.id_s_categorie} value={sub.id_s_categorie}>{sub.sous_categorie}</option>
-                                                ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="mb-4">
-                                    <label htmlFor="file" className="block text-sm font-medium mb-1">Fichier</label>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center bg-gray-50">
-                                        <input
-                                            type="file"
-                                            id="file"
-                                            name="file"
-                                            accept=".pdf,.docx,.pptx,.txt"
-                                            className="hidden"
-                                            onChange={handleFileChange}
-                                            disabled={isSubmitting}
-                                            required
-                                        />
-                                        <label htmlFor="file" className="block mb-2 cursor-pointer">
-                                            {fileName}<br />
-                                            <span className="text-2xl">⬆</span><br />
-                                            Cliquez pour télécharger ou glissez-déposez
-                                        </label>
-                                        <p className="text-gray-500 text-sm">PDF, DOCX, PPTX, TXT (max. 20 Mo)</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleCancel}
-                                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
-                                        disabled={isSubmitting}
-                                    >
-                                        Annuler
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900 disabled:bg-gray-500"
-                                        disabled={isSubmitting}
-                                    >
-                                        {isSubmitting ? 'Publication en cours...' : 'Publier'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleCancel}
+                                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                                    disabled={isSubmitting}
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900 disabled:bg-gray-500"
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Publication en cours...' : 'Publier'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                </main>
-            );
-        };
-
-        // App Component
-        const App = () => {
-            return (
-                <div>
-                    <Header />
-                    <PublishForm />
                 </div>
-            );
-        };
+            </main>
+        );
+    };
 
-        // Render the App
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+    // App Component
+    const App = () => {
+        return (
+            <div>
+                <Header />
+                <PublishForm />
+            </div>
+        );
+    };
+
+    // Render the App (using ReactDOM.render instead of createRoot for UMD version)
+    ReactDOM.render(<App />, document.getElementById('root'));
+</script>
 </body>
 </html>
