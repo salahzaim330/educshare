@@ -1,7 +1,7 @@
 <?php
 session_start();
-require 'db.php';
-require 'auth.php';
+require_once '../../auth/db.php';
+require_once '../../auth/auth.php';
 
 $s1 = $connexion->query('SELECT * FROM Categorie');
 $categorie = $s1->fetchAll(PDO::FETCH_ASSOC);
@@ -20,8 +20,8 @@ if (empty($etudiant) || empty($enseignant) || empty($categorie)) {
 }
 
 $tableau = ($_SESSION['user_type'] === 'etudiant') 
-? 'tableau_bord_etudiant.php' 
-: 'tableau_bord_enseignant.php';
+? '../../etudiant/pages/tableau_bord.php' 
+: '../../pages/enseignant/tableau_bord.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             die('Un champ est vide');
         }
 
-        $ins1 = $connexion->prepare('INSERT INTO Categorie (nom, description, id_enseignant) VALUES (:nom, :description, :id_enseignant)');
+        $ins1 = $connexion->prepare('INSERT INTO categorie (nom, description, id_enseignant) VALUES (:nom, :description, :id_enseignant)');
         $ins1->execute([
             'nom' => $nom_cat,
             'description' => $description_cat,
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             die('Un champ est vide');
         }
 
-        $stmp = $connexion->prepare('SELECT id_categorie FROM Categorie WHERE nom = :nom');
+        $stmp = $connexion->prepare('SELECT id_categorie FROM categorie WHERE nom = :nom');
         $stmp->execute(['nom' => $cat_parente]);
         $r = $stmp->fetch(PDO::FETCH_ASSOC);
 
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             die('Aucun id de catégorie trouvé');
         }
 
-        $in1 = $connexion->prepare('INSERT INTO Sous_categorie (nom, description, id_categorie, id_enseignant) VALUES (:nom, :description, :id_categorie, :id_enseignant)');
+        $in1 = $connexion->prepare('INSERT INTO sous_categorie (nom, description, id_categorie, id_enseignant) VALUES (:nom, :description, :id_categorie, :id_enseignant)');
         $in1->execute([
             'nom' => $nom_scat,
             'description' => $description_scat,
@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EduShare - Gestion de la plateforme</title>
-    <link rel="stylesheet" href="assets/css/gestionplatform.css">
+    <link rel="stylesheet" href="../../assets/css/gestionplatform.css">
 
     
 
@@ -122,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="container">
         <div class="header-action">
             <h1>Gestion de la plateforme</h1>
-            <a href="tableau_bord_enseignant.php" class="btn btn-outline" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">
+            <a href="../../pages/enseignant/tableau_bord.php" class="btn btn-outline" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">
                 ← Retour au tableau de bord
             </a>
         </div>
@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                     ?>
                                     </td>
                                         <td>
-                                        <a href="includes/supprimer/supp_categorie.php?id=<?php echo htmlspecialchars($cat['id_categorie']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a>
+                                        <a href="../supprimer/supp_categorie.php?id=<?php echo htmlspecialchars($cat['id_categorie']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a>
 
                                         </td>
                                     </tr>
@@ -247,7 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                     </td>
                                         <td><?php echo htmlspecialchars($scat['description']); ?></td>
                                         <td>
-                                        <a href="includes/supprimer/supp_sous_categorie.php?id=<?php echo htmlspecialchars($scat['id_s_categorie']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a>
+                                        <a href="../supprimer/supp_sous_categorie.php?id=<?php echo htmlspecialchars($scat['id_s_categorie']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a>
 
                                         </td>
                                     </tr>
@@ -300,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         <td><?php echo htmlspecialchars($ens['nom']); ?></td>
                                         <td><?php echo htmlspecialchars($ens['email']) ?></td>
                                         <td>enseignant</td>
-                                        <td><a href="supp_enseignant.php?id=<?php echo htmlspecialchars($ens['id']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a></td>
+                                        <td><a href="../supprimer/supp_enseignant.php?id=<?php echo htmlspecialchars($ens['id']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a></td>
                                     </tr>
                                     <?php endforeach; ?>
                                     <?php endif; ?>
@@ -310,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         <td><?php echo htmlspecialchars($etud['nom']); ?></td>
                                         <td><?php echo htmlspecialchars($etud['email']) ?></td>
                                         <td>etudiant</td>
-                                        <td><a href="includes/supprimer/supp_etudiant.php?id=<?php echo htmlspecialchars($etud['id']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a></td>
+                                        <td><a href="../supprimer/supp_etudiant.php?id=<?php echo htmlspecialchars($etud['id']); ?>" style="background-color: #343a40; color: white; padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#23272b'" onmouseout="this.style.backgroundColor='#343a40'">Supprimer</a></td>
                                     </tr>
                                     <?php endforeach; ?>
                                     

@@ -21,8 +21,8 @@ require '../../auth/auth.php';
         </div>
         <nav>
             <a href="tableau_bord.php" class="active">Tableau de bord</a>
-            <a href="categorie.html">Catégories</a>
-            <a href="gestion.php">Gestion</a>
+            <a href="../../includes/categorie/categorie.php">Catégories</a>
+            <a href="../../includes/gestion/gestion.php">Gestion</a>
         </nav>
         <div class="user-profile">
             <span class="notification">3</span>
@@ -36,10 +36,10 @@ require '../../auth/auth.php';
         <aside>
             <h2>Menu</h2>
             <ul>
-                <li><a href="tableau_bord_enseignant.php" class="active"><span>📊</span> Tableau de bord</a></li>
-                <li><a href="profil.html"><span>👤</span> Profil</a></li>
-                <li><a href="publier.php"><span>⬆</span> Publier</a></li>
-                <li><a href="deconnexion.php"><span>➡️</span> Déconnexion</a></li>
+                <li><a href="tableau_bord.php" class="active"><span>📊</span> Tableau de bord</a></li>
+                <li><a href="profile.php"><span>👤</span> Profil</a></li>
+                <li><a href="../../includes/publier/publier.php"><span>⬆</span> Publier</a></li>
+                <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>
             </ul>
             <h3>Catégories</h3>
             <ul class="categories">
@@ -51,12 +51,9 @@ require '../../auth/auth.php';
         </aside>
     
         <main>
-            <h1>Tableau de bord</h1>
+            <h1>Mws publications</h1>
             <div class="tabs-container">
                 <nav class="tabs">
-                    
-                    
-                    <a href="#">Mes publications</a>
                 </nav>
                 <a href="publier.php" class="publish-btn"><span>⬆</span> Publier une ressource</a>
             </div>

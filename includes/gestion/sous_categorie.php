@@ -1,10 +1,10 @@
 <?php
 session_start();
-$connexion = require_once 'db.php';
+$connexion = require_once '../../auth/db.php';
 
 // Vérifier si l'utilisateur est connecté et a les droits nécessaires
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'enseignant') {
-    header('Location: login.php');
+    header('Location: ../../auth/login.php');
     exit();
 }
 

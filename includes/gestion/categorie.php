@@ -1,10 +1,10 @@
 <?php
 session_start();
-$connexion = require_once 'db.php';
+$connexion = require_once '../../auth/db.php';
 
 // Vérifier si l'utilisateur est connecté et a les droits nécessaires
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'enseignant') {
-    header('Location: login.php');
+    header('Location: ../../auth/login.php');
     exit();
 }
 
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Suppression d'une catégorie
 if (isset($_GET['delete'])) {
-    $stmt = $connexion->prepare('DELETE FROM Categorie WHERE id_categorie = :id');
+    $stmt = $connexion->prepare('DELETE FROM categorie WHERE id_categorie = :id');
     $stmt->execute([':id' => $_GET['delete']]);
     header('Location: gestion.php');
     exit();
