@@ -35,8 +35,8 @@ try {
     // Fetch subcategory details
     $stmt = $connexion->prepare("
         SELECT s.nom AS sous_categorie, c.nom AS categorie
-        FROM Sous_categorie s
-        JOIN Categorie c ON s.id_categorie = c.id_categorie
+        FROM sous_categorie s
+        JOIN categorie c ON s.id_categorie = c.id_categorie
         WHERE s.id_s_categorie = :id_s_categorie
     ");
     $stmt->execute(['id_s_categorie' => $id_s_categorie]);
@@ -51,7 +51,7 @@ try {
     // Fetch publications for the subcategory
     $stmt = $connexion->prepare("
         SELECT p.id_pub, p.titre, p.date_pub, p.description, p.contenu
-        FROM Publication p
+        FROM publication p
         WHERE p.id_s_categorie = :id_s_categorie
         ORDER BY p.date_pub DESC
     ");
