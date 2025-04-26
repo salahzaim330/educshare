@@ -214,13 +214,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['change_password'])) {
                 <li><a href="../../includes/publier/publier.php"><span>⬆</span> Publier</a></li>
                 <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>
             </ul>
-            <h3>Catégories</h3>
-            <ul class="categories">
-                <li><span>Mathématiques</span><span class="count">12</span></li>
-                <li><span>Physique</span><span class="count">8</span></li>
-                <li><span>Informatique</span><span class="count">15</span></li>
-            </ul>
-            <a href="categorie.html" class="see-all">Voir toutes les catégories</a>
+            
         </aside>
 
         <main>

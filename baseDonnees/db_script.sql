@@ -54,6 +54,7 @@ CREATE TABLE Suivre_sous_categorie(
 CREATE TABLE Publication (
     id_pub INT PRIMARY KEY AUTO_INCREMENT,
     titre VARCHAR(255),
+    description VARCHAR(255),
     date_pub DATE,
     contenu VARCHAR(255);
     note FLOAT,

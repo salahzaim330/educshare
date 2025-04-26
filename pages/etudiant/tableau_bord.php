@@ -21,7 +21,7 @@ require '../../auth/auth.php';
         </div>
         <nav>
             <a href="tableau_bord_enseignant.php" class="active">Tableau de bord</a>
-            <a href="categorie.html">Catégories</a>
+            <a href="../../includes/categorie/categorie.php">Catégories</a>
          
         </nav>
         <div class="user-profile">
@@ -43,13 +43,7 @@ require '../../auth/auth.php';
         <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>
 
             </ul>
-            <h3>Catégories</h3>
-            <ul class="categories">
-                <li><span>Mathématiques</span><span class="count">12</span></li>
-                <li><span>Physique</span><span class="count">8</span></li>
-                <li><span>Informatique</span><span class="count">15</span></li>
-            </ul>
-            <a href="categorie.html" class="see-all">Voir toutes les catégories</a>
+            
         </aside>
 
         <main>
@@ -58,7 +52,7 @@ require '../../auth/auth.php';
                 <nav class="tabs">
                     
                     
-                    <a href="#">Mes publications</a>
+                <a href="#"><strong>Mes publications</strong></a>
                 </nav>
                 <a href="../../includes/publier/publier.php" class="publish-btn"><span>⬆</span> Publier une ressource</a>
             </div>

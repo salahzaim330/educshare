@@ -1,89 +1,177 @@
 <?php
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
+ini_set('session.cookie_secure', 1); // Enable if using HTTPS
 session_start();
 require_once '../../auth/db.php';
 require_once '../../auth/auth.php';
-$tableau = ($_SESSION['user_type'] === 'etudiant') 
-? '../../pages/etudiant/tableau_bord.php' 
-: '../../pages/enseignant/tableau_bord.php';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $titre = $_POST['titre'];
-    $description = $_POST['description'];
-    $nom_sous_categorie = $_POST['sous_categorie']; // on suppose que c’est le nom
+// Generate CSRF token if not set
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
-    if (empty($titre) || empty($description) || empty($nom_sous_categorie)) {
-        die("Un champ est vide");
-    }
-
-    // Rechercher l'ID de la sous-catégorie à partir de son nom
-    $stmt_sous_cat = $connexion->prepare("SELECT id_s_categorie FROM Sous_categorie WHERE nom = :nom");
-    $stmt_sous_cat->execute([':nom' => $nom_sous_categorie]);
-    $sous_cat = $stmt_sous_cat->fetch();
-
-    if (!$sous_cat) {
-        die("Sous-catégorie introuvable !");
-    }
-
-    $id_sous_categorie = $sous_cat['id_s_categorie'];
-
-    // Gestion du fichier
-    if (isset($_FILES['file']) && $_FILES['file']['error'] === 0) {
-        $filename = basename($_FILES['file']['name']);
-        $tmp = $_FILES['file']['tmp_name'];
-        $dest = 'publications/' . $filename;
-
-        if (!move_uploaded_file($tmp, $dest)) {
-            die("Erreur lors du déplacement du fichier");
-        }
-    } else {
-        die("Erreur lors du téléchargement du fichier");
-    }
-
-    // Déterminer si l'utilisateur est étudiant ou enseignant
-    $id_etudiant = null;
-    $id_enseignant = null;
-
-    if ($_SESSION['user_type'] === 'etudiant') {
-        $id_etudiant = $_SESSION['id'];
-    } elseif ($_SESSION['user_type'] === 'enseignant') {
-        $id_enseignant = $_SESSION['id'];
-    } else {
-        die("Type d'utilisateur non reconnu.");
-    }
-
-    // Insertion de la publication
-    $stmt = $connexion->prepare("INSERT INTO Publication 
-        (titre, date_pub, contenu, id_enseignant, id_etudiant, id_s_categorie)
-        VALUES (:titre, NOW(), :contenu, :id_enseignant, :id_etudiant, :id_s_categorie)");
-
-    $stmt->execute([
-        ':titre' => $titre,
-        ':contenu' => $dest,
-        ':id_enseignant' => $id_enseignant,
-        ':id_etudiant' => $id_etudiant,
-        ':id_s_categorie' => $id_sous_categorie
-    ]);
-
-    
-
-
-    // Redirection
-    echo "<script type='text/javascript'>
-            alert('Publication réussie !');
-            window.location.href = '" . ($tableau) . "'; // Redirection après l'alerte
-          </script>";
-
+// Check if user is logged in
+if (!isset($_SESSION['id']) || !isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['etudiant', 'enseignant'])) {
+    header('Location: ../../auth/login.php');
     exit();
 }
+
+// Determine dashboard based on user type
+$dashboard = $_SESSION['user_type'] === 'etudiant' 
+    ? '../../pages/etudiant/tableau_bord.php' 
+    : '../../pages/enseignant/tableau_bord.php';
+
+// Fetch categories and subcategories for the form
+try {
+    $stmt = $connexion->query("SELECT id_categorie, nom FROM Categorie ORDER BY nom");
+    $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmt = $connexion->query("
+        SELECT s.id_s_categorie, s.nom AS sous_categorie, s.id_categorie
+        FROM Sous_categorie s
+        ORDER BY s.nom
+    ");
+    $subcategories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $_SESSION['error'] = "Erreur de base de données : " . $e->getMessage();
+    $categories = [];
+    $subcategories = [];
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Validate CSRF token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $_SESSION['error'] = "Invalid CSRF token";
+        header("Location: publier.php");
+        exit();
+    }
+
+    // Validate form inputs
+    $titre = trim($_POST['titre'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $id_sous_categorie = intval($_POST['sous_categorie'] ?? 0);
+
+    if (empty($titre) || empty($description) || $id_sous_categorie <= 0) {
+        $_SESSION['error'] = "Tous les champs sont obligatoires.";
+        header("Location: publier.php");
+        exit();
+    }
+
+    // Validate subcategory
+    try {
+        $stmt = $connexion->prepare("SELECT id_s_categorie FROM Sous_categorie WHERE id_s_categorie = :id");
+        $stmt->execute(['id' => $id_sous_categorie]);
+        if (!$stmt->fetch()) {
+            $_SESSION['error'] = "Sous-catégorie invalide.";
+            header("Location: publier.php");
+            exit();
+        }
+    } catch (PDOException $e) {
+        $_SESSION['error'] = "Erreur de base de données : " . $e->getMessage();
+        header("Location: publier.php");
+        exit();
+    }
+
+    // File handling
+    if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        $_SESSION['error'] = "Erreur lors du téléchargement du fichier.";
+        header("Location: publier.php");
+        exit();
+    }
+
+    $allowed_extensions = ['pdf', 'docx', 'pptx', 'txt'];
+    $max_size = 20 * 1024 * 1024; // 20 MB
+    $file_extension = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
+    $file_size = $_FILES['file']['size'];
+    $filename = uniqid() . '_' . basename($_FILES['file']['name']);
+    $upload_dir = __DIR__ . '/../../Uploads/publications/';
+    $relative_path = 'Uploads/publications/' . $filename;
+    $dest = $upload_dir . $filename;
+
+    // Validate file
+    if (!in_array($file_extension, $allowed_extensions)) {
+        $_SESSION['error'] = "Type de fichier non autorisé. Formats acceptés : PDF, DOCX, PPTX, TXT.";
+        header("Location: publier.php");
+        exit();
+    }
+    if ($file_size > $max_size) {
+        $_SESSION['error'] = "Le fichier est trop volumineux. Taille maximale : 20 Mo.";
+        header("Location: publier.php");
+        exit();
+    }
+
+    // Additional server-side file type validation
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $file_type = finfo_file($finfo, $_FILES['file']['tmp_name']);
+    finfo_close($finfo);
+    $allowed_mime_types = [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain'
+    ];
+    if (!in_array($file_type, $allowed_mime_types)) {
+        $_SESSION['error'] = "Type de fichier invalide détecté par le serveur.";
+        header("Location: publier.php");
+        exit();
+    }
+
+    // Ensure upload directory exists and is writable
+    if (!is_dir($upload_dir)) {
+        if (!mkdir($upload_dir, 0755, true)) {
+            $_SESSION['error'] = "Erreur lors de la création du dossier d'upload.";
+            header("Location: publier.php");
+            exit();
+        }
+    }
+    if (!is_writable($upload_dir)) {
+        $_SESSION['error'] = "Le dossier d'upload n'est pas accessible en écriture.";
+        header("Location: publier.php");
+        exit();
+    }
+
+    // Move uploaded file
+    if (!move_uploaded_file($_FILES['file']['tmp_name'], $dest)) {
+        $_SESSION['error'] = "Erreur lors du déplacement du fichier.";
+        header("Location: publier.php");
+        exit();
+    }
+
+    // Determine user type
+    $id_etudiant = $_SESSION['user_type'] === 'etudiant' ? $_SESSION['id'] : null;
+    $id_enseignant = $_SESSION['user_type'] === 'enseignant' ? $_SESSION['id'] : null;
+
+    // Insert publication
+    try {
+        $stmt = $connexion->prepare("
+            INSERT INTO Publication 
+            (titre, date_pub, contenu, description, id_enseignant, id_etudiant, id_s_categorie)
+            VALUES (:titre, NOW(), :contenu, :description, :id_enseignant, :id_etudiant, :id_s_categorie)
+        ");
+        $stmt->execute([
+            'titre' => $titre,
+            'contenu' => $relative_path, // Store relative path
+            'description' => $description,
+            'id_enseignant' => $id_enseignant,
+            'id_etudiant' => $id_etudiant,
+            'id_s_categorie' => $id_sous_categorie
+        ]);
+
+        $_SESSION['success'] = "Publication réussie !";
+        header("Location: $dashboard");
+        exit();
+    } catch (PDOException $e) {
+        // Delete uploaded file if database insertion fails
+        if (file_exists($dest)) {
+            unlink($dest);
+        }
+        $_SESSION['error'] = "Erreur de base de données : " . $e->getMessage();
+        header("Location: publier.php");
+        exit();
+    }
+}
 ?>
-
-
-
-
-
-
-
-
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -91,23 +179,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EduShare - Publier une ressource</title>
-    <!-- Tailwind CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <!-- React and ReactDOM CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
-    <!-- Babel CDN for JSX -->
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
     <style>
-        body {
-            background-color: #f5f5f5;
-        }
-        header {
-            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
-        }
-        .menu-icon {
-            cursor: pointer;
-        }
+        body { background-color: #f5f5f5; }
+        header { box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1); }
+        .menu-icon { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -116,20 +195,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <script type="text/babel">
         // Header Component
         const Header = () => {
+            const userName = <?php echo json_encode(htmlspecialchars($_SESSION['prenom'] . ' ' . $_SESSION['username'])); ?>;
+            const userType = <?php echo json_encode(htmlspecialchars($_SESSION['user_type'])); ?>;
+            const dashboard = <?php echo json_encode($dashboard); ?>;
+
             return (
                 <header className="bg-white border-b p-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <span className="menu-icon text-2xl">☰</span>
-                        <span className="text-xl font-bold"><a href="<?= $tableau ?>"> EduShare</a></span>
+                        <a href={dashboard} className="text-xl font-bold">EduShare</a>
                     </div>
                     <nav className="flex gap-4">
-                        <a href="<?= $tableau ?>" class="text-gray-700 hover:font-bold">Tableau de bord</a>                        <a href="categorie.html" className="text-gray-700 hover:font-bold">Catégories</a>
-                        
+                        <a href={dashboard} className="text-gray-700 hover:font-bold">Tableau de bord</a>
+                        <a href="categories.php" className="text-gray-700 hover:font-bold">Catégories</a>
+                      
                     </nav>
                     <div className="flex items-center gap-2">
                         <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>
-                        <span className="font-bold"><?php echo htmlspecialchars($_SESSION['prenom']. ' ' . $_SESSION['username']) ?></span>
-                        <span className="text-gray-500"><?php echo htmlspecialchars($_SESSION['user_type']) ?></span>
+                        <span className="font-bold">{userName}</span>
+                        <span className="text-gray-500">{userType}</span>
                     </div>
                 </header>
             );
@@ -137,100 +221,65 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // PublishForm Component
         const PublishForm = () => {
+            const categories = <?php echo json_encode($categories); ?>;
+            const subcategories = <?php echo json_encode($subcategories); ?>;
+            const csrfToken = <?php echo json_encode(htmlspecialchars($_SESSION['csrf_token'])); ?>;
+            const dashboard = <?php echo json_encode($dashboard); ?>;
             const [title, setTitle] = React.useState('');
             const [description, setDescription] = React.useState('');
-            const [category, setCategory] = React.useState('Informatique');
-            const [subcategory, setSubcategory] = React.useState('Programmation - Python');
-            const [resourceType, setResourceType] = React.useState('Document');
+            const [categoryId, setCategoryId] = React.useState(categories[0]?.id_categorie || '');
+            const [subcategoryId, setSubcategoryId] = React.useState('');
             const [file, setFile] = React.useState(null);
-
-            // Updated mapping of categories to subcategories based on the provided hierarchy
-            const subcategoriesMap = {
-                'Informatique': [
-                    'Programmation - Python',
-                    'Programmation - Java',
-                    'Programmation - C++',
-                    'Programmation - JavaScript',
-                    'Développement web - Front-end (HTML, CSS, JS)',
-                    'Développement web - Back-end (Node.js, PHP, Django)',
-                    'Base de données - SQL',
-                    'Base de données - NoSQL (MongoDB)',
-                    'Intelligence artificielle - Machine Learning',
-                    'Intelligence artificielle - Deep Learning',
-                    'Cybersécurité - Cryptographie',
-                    'Cybersécurité - Sécurité des réseaux'
-                ],
-                'Physique': [
-                    'Mécanique - Dynamique',
-                    'Mécanique - Statique',
-                    'Électricité & Magnétisme - Courant alternatif/continu',
-                    'Électricité & Magnétisme - Champs électromagnétiques',
-                    'Optique - Optique géométrique',
-                    'Optique - Optique physique',
-                    'Thermodynamique - Lois des gaz',
-                    'Thermodynamique - Transferts de chaleur',
-                    'Physique moderne - Relativité',
-                    'Physique moderne - Physique quantique'
-                ],
-                'Mathématiques': [
-                    'Algèbre - Polynômes',
-                    'Algèbre - Matrices',
-                    'Analyse - Dérivées & intégrales',
-                    'Analyse - Suites & séries',
-                    'Probabilités & Statistiques - Variables aléatoires',
-                    'Probabilités & Statistiques - Loi normale',
-                    'Géométrie - Géométrie analytique',
-                    'Géométrie - Trigonométrie',
-                    'Logique & Ensembles - Théorie des ensembles',
-                    'Logique & Ensembles - Logique mathématique'
-                ],
-                'Langues': [
-                    'Français - Grammaire',
-                    'Français - Orthographe',
-                    'Français - Rédaction',
-                    'Anglais - Vocabulary',
-                    'Anglais - Grammar',
-                    'Anglais - Conversation',
-                    'Espagnol - Compréhension écrite',
-                    'Espagnol - Expression orale',
-                    'Arabe - Langue classique',
-                    'Arabe - Darija (dialecte marocain)'
-                ]
-            };
+            const [fileName, setFileName] = React.useState('Aucun fichier sélectionné');
+            const [isSubmitting, setIsSubmitting] = React.useState(false);
+            const [error, setError] = React.useState('');
 
             // Update subcategory when category changes
             React.useEffect(() => {
-                const subcategories = subcategoriesMap[category] || [];
-                setSubcategory(subcategories[0] || ''); // Set to first subcategory or empty if none
-            }, [category]);
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if (title && description && category && subcategory && resourceType && file) {
-                    const maxSize = 20 * 1024 * 1024; // 20 MB in bytes
-                    if (file.size > maxSize) {
-                        alert('Le fichier est trop volumineux. La taille maximale est de 20 Mo.');
-                        return;
-                    }
-                    alert('Ressource publiée avec succès !');
-                    window.location.href = 'dashboard_enseignant.html';
-                } else {
-                    alert('Veuillez remplir tous les champs.');
-                }
-            };
-
-            const handleCancel = () => {
-                if (confirm('Êtes-vous sûr de vouloir annuler ? Les données non enregistrées seront perdues.')) {
-                    window.location.href = 'dashboard_enseignant.html';
-                }
-            };
+                const firstSubcategory = subcategories.find(sub => sub.id_categorie === parseInt(categoryId));
+                setSubcategoryId(firstSubcategory?.id_s_categorie || '');
+            }, [categoryId]);
 
             const handleFileChange = (e) => {
                 const selectedFile = e.target.files[0];
-                setFile(selectedFile);
-                const label = e.target.nextElementSibling;
-                label.innerHTML = (selectedFile ? selectedFile.name : 'Aucun fichier sélectionné') +
-                    '<br><span className="text-2xl">⬆</span><br>Cliquez pour télécharger ou glissez-déposez';
+                if (selectedFile) {
+                    const extension = selectedFile.name.split('.').pop().toLowerCase();
+                    const allowedExtensions = ['pdf', 'docx', 'pptx', 'txt'];
+                    if (!allowedExtensions.includes(extension)) {
+                        setError('Type de fichier non autorisé. Formats acceptés : PDF, DOCX, PPTX, TXT.');
+                        setFile(null);
+                        setFileName('Aucun fichier sélectionné');
+                        return;
+                    }
+                    if (selectedFile.size > 20 * 1024 * 1024) {
+                        setError('Le fichier est trop volumineux. Taille maximale : 20 Mo.');
+                        setFile(null);
+                        setFileName('Aucun fichier sélectionné');
+                        return;
+                    }
+                    setError('');
+                    setFile(selectedFile);
+                    setFileName(selectedFile.name);
+                } else {
+                    setFile(null);
+                    setFileName('Aucun fichier sélectionné');
+                }
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!title.trim() || !description.trim() || !subcategoryId || !file) {
+                    setError('Veuillez remplir tous les champs obligatoires.');
+                    return;
+                }
+                setIsSubmitting(true);
+                // Form submission proceeds via native form submit
+            };
+
+            const handleCancel = () => {
+                if (window.confirm('Êtes-vous sûr de vouloir annuler ? Les données non enregistrées seront perdues.')) {
+                    window.location.href = dashboard;
+                }
             };
 
             return (
@@ -239,10 +288,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <div className="mb-4">
                             <h1 className="text-2xl font-bold">Publier une ressource</h1>
                         </div>
+                        <?php if (isset($_SESSION['error'])): ?>
+                            <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
+                                <?php echo htmlspecialchars($_SESSION['error']); ?>
+                            </div>
+                            <?php unset($_SESSION['error']); ?>
+                        <?php endif; ?>
+                        {error && (
+                            <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
+                                {error}
+                            </div>
+                        )}
                         <div className="bg-white border border-gray-300 rounded-md p-4">
                             <h2 className="text-lg font-bold uppercase mb-2">Informations sur la ressource</h2>
                             <p className="text-gray-500 mb-4">Renseignez les détails de votre ressource pédagogique</p>
-                            <form  name="myform" action="publier.php" method="post" enctype="multipart/form-data">
+                            <form action="publier.php" method="post" enctype="multipart/form-data" onSubmit={handleSubmit}>
+                                <input type="hidden" name="csrf_token" value={csrfToken} />
                                 <div className="mb-4">
                                     <label htmlFor="title" className="block text-sm font-medium mb-1">Titre</label>
                                     <input
@@ -253,6 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         placeholder="Titre de votre ressource"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
+                                        disabled={isSubmitting}
                                         required
                                     />
                                 </div>
@@ -267,6 +329,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         rows="3"
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
+                                        disabled={isSubmitting}
                                         required
                                     ></textarea>
                                 </div>
@@ -274,85 +337,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <div className="grid grid-cols-2 gap-4 mb-4">
                                     <div>
                                         <label htmlFor="category" className="block text-sm font-medium mb-1">Catégorie</label>
-                                        <input
-                                            type="text"
+                                        <select
                                             id="category"
                                             name="categorie"
                                             className="w-full border border-gray-300 rounded-md p-2"
-                                            value={category}
-                                            onChange={(e) => setCategory(e.target.value)}
+                                            value={categoryId}
+                                            onChange={(e) => setCategoryId(e.target.value)}
+                                            disabled={isSubmitting}
                                             required
-                                        />
+                                        >
+                                            <option value="">Sélectionnez une catégorie</option>
+                                            {categories.map(cat => (
+                                                <option key={cat.id_categorie} value={cat.id_categorie}>{cat.nom}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label htmlFor="subcategory" className="block text-sm font-medium mb-1">Sous-catégorie</label>
-                                        <input
-                                            type="text"
+                                        <select
                                             id="subcategory"
                                             name="sous_categorie"
                                             className="w-full border border-gray-300 rounded-md p-2"
-                                            value={subcategory}
-                                            onChange={(e) => setSubcategory(e.target.value)}
+                                            value={subcategoryId}
+                                            onChange={(e) => setSubcategoryId(e.target.value)}
+                                            disabled={isSubmitting}
                                             required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="mb-4">
-                                    <label className="block text-sm font-medium mb-1">Type de ressource</label>
-                                    <div className="flex gap-3">
-                                        <div className="flex-1">
-                                            <input
-                                                type="radio"
-                                                id="document"
-                                                
-                                                name="resource-type"
-                                                value="Document"
-                                                checked={resourceType === 'Document'}
-                                                onChange={(e) => setResourceType(e.target.value)}
-                                                className="hidden"
-                                            />
-                                            <label
-                                                htmlFor="document"
-                                                className={`flex justify-center items-center gap-2 border border-gray-300 rounded-lg p-4 w-full min-h-[60px] cursor-pointer transition-colors duration-300 ${resourceType === 'Document' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
-                                            >
-                                                📄 Document
-                                            </label>
-                                        </div>
-                                        <div className="flex-1">
-                                            <input
-                                                type="radio"
-                                                id="video"
-                                                name="resource-type"
-                                                value="Vidéo"
-                                                checked={resourceType === 'Vidéo'}
-                                                onChange={(e) => setResourceType(e.target.value)}
-                                                className="hidden"
-                                            />
-                                            <label
-                                                htmlFor="video"
-                                                className={`flex justify-center items-center gap-2 border border-gray-300 rounded-lg p-4 w-full min-h-[60px] cursor-pointer transition-colors duration-300 ${resourceType === 'Vidéo' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
-                                            >
-                                                ⏯ Vidéo
-                                            </label>
-                                        </div>
-                                        <div className="flex-1">
-                                            <input
-                                                type="radio"
-                                                id="presentation"
-                                                name="resource-type"
-                                                value="Présentation"
-                                                checked={resourceType === 'Présentation'}
-                                                onChange={(e) => setResourceType(e.target.value)}
-                                                className="hidden"
-                                            />
-                                            <label
-                                                htmlFor="presentation"
-                                                className={`flex justify-center items-center gap-2 border border-gray-300 rounded-lg p-4 w-full min-h-[60px] cursor-pointer transition-colors duration-300 ${resourceType === 'Présentation' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
-                                            >
-                                                📊 Présentation
-                                            </label>
-                                        </div>
+                                        >
+                                            <option value="">Sélectionnez une sous-catégorie</option>
+                                            {subcategories
+                                                .filter(sub => sub.id_categorie === parseInt(categoryId))
+                                                .map(sub => (
+                                                    <option key={sub.id_s_categorie} value={sub.id_s_categorie}>{sub.sous_categorie}</option>
+                                                ))}
+                                        </select>
                                     </div>
                                 </div>
 
@@ -366,29 +383,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                             accept=".pdf,.docx,.pptx,.txt"
                                             className="hidden"
                                             onChange={handleFileChange}
+                                            disabled={isSubmitting}
                                             required
                                         />
-                                        <label htmlFor="file" className="block mb-2">
+                                        <label htmlFor="file" className="block mb-2 cursor-pointer">
+                                            {fileName}<br />
                                             <span className="text-2xl">⬆</span><br />
                                             Cliquez pour télécharger ou glissez-déposez
                                         </label>
-                                        <p className="text-gray-500 text-sm">PDF, DOCX, PPTX (MAX. 20 Mo)</p>
+                                        <p className="text-gray-500 text-sm">PDF, DOCX, PPTX, TXT (max. 20 Mo)</p>
                                     </div>
                                 </div>
 
                                 <div className="flex justify-end gap-2">
                                     <button
                                         type="button"
-                                        
+                                        onClick={handleCancel}
                                         className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                                        disabled={isSubmitting}
                                     >
-                                       <a  href="<?= $tableau ?>"> Annuler</a>
+                                        Annuler
                                     </button>
                                     <button
                                         type="submit"
-                                        className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900"
-                                    >   
-                                        Publier
+                                        className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900 disabled:bg-gray-500"
+                                        disabled={isSubmitting}
+                                    >
+                                        {isSubmitting ? 'Publication en cours...' : 'Publier'}
                                     </button>
                                 </div>
                             </form>
