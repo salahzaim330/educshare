@@ -1,54 +1,88 @@
 <?php
 session_start();
-$connexion = require_once '../../auth/db.php';
+require_once __DIR__ . '/../../auth/db.php';
+require_once __DIR__ . '/../../auth/auth.php';
 
-// Vérifier si l'utilisateur est connecté et a les droits nécessaires
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'enseignant') {
+// Vérifier si l'utilisateur est connecté et est un enseignant
+if (!isset($_SESSION['id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'enseignant') {
     header('Location: ../../auth/login.php');
-    exit();
+    exit;
+}
+
+// Générer jeton CSRF
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 // Ajout ou modification d'une catégorie
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nom = trim($_POST['nom']);
-    $description = trim($_POST['description']);
-    $id_enseignant = $_SESSION['user_id'];
+$message = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+    try {
+        $nom = trim($_POST['nom']);
+        $description = trim($_POST['description']);
+        $id_enseignant = $_SESSION['id'];
 
-    if (isset($_POST['id_categorie']) && !empty($_POST['id_categorie'])) {
-        // Modification
-        $stmt = $connexion->prepare('UPDATE Categorie SET nom = :nom, description = :description WHERE id_categorie = :id');
-        $stmt->execute([
-            ':nom' => $nom,
-            ':description' => $description,
-            ':id' => $_POST['id_categorie']
-        ]);
-    } else {
-        // Ajout
-        $stmt = $connexion->prepare('INSERT INTO Categorie (nom, description, id_enseignant) VALUES (:nom, :description, :id_enseignant)');
-        $stmt->execute([
-            ':nom' => $nom,
-            ':description' => $description,
-            ':id_enseignant' => $id_enseignant
-        ]);
+        if (empty($nom) || empty($description)) {
+            $message = '<div class="alert alert-danger">Tous les champs sont obligatoires.</div>';
+        } elseif (strlen($nom) > 100 || strlen($description) > 255) {
+            $message = '<div class="alert alert-danger">Le nom ou la description est trop long.</div>';
+        } else {
+            if (isset($_POST['id_categorie']) && !empty($_POST['id_categorie'])) {
+                // Modification
+                $stmt = $connexion->prepare('UPDATE Categorie SET nom = :nom, description = :description WHERE id_categorie = :id');
+                $stmt->execute([
+                    ':nom' => $nom,
+                    ':description' => $description,
+                    ':id' => $_POST['id_categorie']
+                ]);
+                $message = '<div class="alert alert-success">Catégorie modifiée avec succès.</div>';
+            } else {
+                // Ajout
+                $stmt = $connexion->prepare('INSERT INTO Categorie (nom, description, id_enseignant) VALUES (:nom, :description, :id_enseignant)');
+                $stmt->execute([
+                    ':nom' => $nom,
+                    ':description' => $description,
+                    ':id_enseignant' => $id_enseignant
+                ]);
+                $message = '<div class="alert alert-success">Catégorie ajoutée avec succès.</div>';
+            }
+            header('Location: gestion.php');
+            exit;
+        }
+    } catch (PDOException $e) {
+        error_log("Erreur DB: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+        $message = '<div class="alert alert-danger">Erreur: ' . htmlspecialchars($e->getMessage()) . '</div>';
     }
-    header('Location: gestion.php');
-    exit();
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $message = '<div class="alert alert-danger">Jeton CSRF invalide.</div>';
 }
 
 // Suppression d'une catégorie
 if (isset($_GET['delete'])) {
-    $stmt = $connexion->prepare('DELETE FROM categorie WHERE id_categorie = :id');
-    $stmt->execute([':id' => $_GET['delete']]);
-    header('Location: gestion.php');
-    exit();
+    try {
+        $stmt = $connexion->prepare('DELETE FROM Categorie WHERE id_categorie = :id');
+        $stmt->execute([':id' => $_GET['delete']]);
+        $message = '<div class="alert alert-success">Catégorie supprimée avec succès.</div>';
+        header('Location: gestion.php');
+        exit;
+    } catch (PDOException $e) {
+        error_log("Erreur DB: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+        $message = '<div class="alert alert-danger">Erreur lors de la suppression.</div>';
+    }
 }
 
 // Charger les données pour modification
 $categorie = null;
 if (isset($_GET['edit'])) {
-    $stmt = $connexion->prepare('SELECT * FROM Categorie WHERE id_categorie = :id');
-    $stmt->execute([':id' => $_GET['edit']]);
-    $categorie = $stmt->fetch();
+    try {
+        $stmt = $connexion->prepare('SELECT * FROM Categorie WHERE id_categorie = :id');
+        $stmt->execute([':id' => $_GET['edit']]);
+        $categorie = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Erreur DB: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+        $message = '<div class="alert alert-danger">Erreur lors du chargement de la catégorie.</div>';
+    }
 }
 ?>
 
@@ -58,7 +92,7 @@ if (isset($_GET['edit'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EduShare - Gestion des catégories</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../../assets/css/gestionplatform.css">
     <style>
         body {
             background-color: #f8f9fa;
@@ -91,10 +125,29 @@ if (isset($_GET['edit'])) {
             margin-bottom: 20px;
         }
         .btn-submit {
-            background-color: #000;
+            background-color: #4a6fdc;
             color: #fff;
             padding: 10px 20px;
             border-radius: 5px;
+            border: none;
+        }
+        .btn-submit:hover {
+            background-color: #3a5fc6;
+        }
+        .alert {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
         @media (max-width: 576px) {
             .main-content {
@@ -109,15 +162,19 @@ if (isset($_GET['edit'])) {
 <body>
     <div class="header">
         <div class="logo">EduShare</div>
-        <a href="gestion.php" class="btn btn-outline-secondary">Retour au tableau de bord</a>
+        <a href="gestion.php" class="btn btn-outline-secondary">Retour à la gestion</a>
     </div>
 
     <div class="main-content">
         <div class="form-container">
             <h2><?php echo isset($categorie) ? 'Modifier une catégorie' : 'Nouvelle catégorie'; ?></h2>
-            <form action="g_categorie.php" method="post">
+            <?php if (!empty($message)): ?>
+                <?php echo $message; ?>
+            <?php endif; ?>
+            <form action="categorie.php" method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                 <?php if (isset($categorie)): ?>
-                    <input type="hidden" name="id_categorie" value="<?php echo $categorie['id_categorie']; ?>">
+                    <input type="hidden" name="id_categorie" value="<?php echo htmlspecialchars($categorie['id_categorie']); ?>">
                 <?php endif; ?>
                 <div class="form-group">
                     <label for="nom">Nom de la catégorie</label>
@@ -131,9 +188,5 @@ if (isset($_GET['edit'])) {
             </form>
         </div>
     </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
