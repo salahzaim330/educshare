@@ -1,43 +1,56 @@
 <?php
 session_start();
 require_once '../../auth/db.php';
-require '../../auth/auth.php';
+require_once '../../auth/auth.php';
 
-// Vérifier que l'utilisateur est connecté et est un enseignant
-if (!isset($_SESSION['id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'enseignant') {
+// Vérifier que l'utilisateur est connecté et est un enseignant ou un étudiant
+if (!isset($_SESSION['id']) || !isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['enseignant', 'etudiant'])) {
     header('Location: ../../auth/login.php');
     exit();
 }
 
+// Générer un jeton CSRF si non défini
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Vérifier que l'ID de la publication est fourni
 if (!isset($_GET['id_pub']) || !filter_var($_GET['id_pub'], FILTER_VALIDATE_INT)) {
-    die("ID de publication invalide.");
+    $_SESSION['error'] = "ID de publication invalide.";
+    header('Location: ../../pages/enseignant/tableau_bord_enseignant.php');
+    exit();
 }
-$publicationId = $_GET['id_pub'];
+$publicationId = (int)$_GET['id_pub'];
 
 // Traiter la soumission d'un commentaire
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_submit'])) {
-    $contenu = trim($_POST['contenu'] ?? '');
-
-    if ($contenu) {
-        try {
-            $stmt = $connexion->prepare("
-                INSERT INTO Commentaire (contenu, date_com, id_enseignant, id_pub)
-                VALUES (:contenu, CURDATE(), :id_enseignant, :id_pub)
-            ");
-            $stmt->execute([
-                ':contenu' => $contenu,
-                ':id_enseignant' => $_SESSION['id'],
-                ':id_pub' => $publicationId
-            ]);
-            $_SESSION['success'] = "Commentaire ajouté avec succès.";
-        } catch (PDOException $e) {
-            $_SESSION['error'] = "Erreur lors de l'ajout du commentaire : " . $e->getMessage();
-        }
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $_SESSION['error'] = "Erreur de validation CSRF.";
     } else {
-        $_SESSION['error'] = "Le commentaire ne peut pas être vide.";
+        $contenu = trim($_POST['contenu'] ?? '');
+
+        if ($contenu) {
+            try {
+                $stmt = $connexion->prepare("
+                    INSERT INTO Commentaire (contenu, date_com, id_enseignant, id_etudiant, id_pub)
+                    VALUES (:contenu, CURDATE(), :id_enseignant, :id_etudiant, :id_pub)
+                ");
+                $stmt->execute([
+                    ':contenu' => $contenu,
+                    ':id_enseignant' => $_SESSION['user_type'] === 'enseignant' ? $_SESSION['id'] : null,
+                    ':id_etudiant' => $_SESSION['user_type'] === 'etudiant' ? $_SESSION['id'] : null,
+                    ':id_pub' => $publicationId
+                ]);
+                $_SESSION['success'] = "Commentaire ajouté avec succès.";
+            } catch (PDOException $e) {
+                error_log("Erreur ajout commentaire: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+                $_SESSION['error'] = "Erreur lors de l'ajout du commentaire.";
+            }
+        } else {
+            $_SESSION['error'] = "Le commentaire ne peut pas être vide.";
+        }
     }
-    // Rediriger pour éviter la resoumission (ou recharger la modale)
+    // Rediriger pour éviter la resoumission
     header("Location: commentaire.php?id_pub=" . $publicationId);
     exit();
 }
@@ -45,7 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_submit'])) {
 // Récupérer les commentaires existants pour la publication
 try {
     $stmt = $connexion->prepare("
-        SELECT c.contenu, c.date_com, e.prenom, e.nom
+        SELECT 
+            c.contenu, 
+            c.date_com, 
+            COALESCE(e.prenom, et.prenom) AS prenom, 
+            COALESCE(e.nom, et.nom) AS nom
         FROM Commentaire c
         LEFT JOIN Enseignant e ON c.id_enseignant = e.id
         LEFT JOIN Etudiant et ON c.id_etudiant = et.id
@@ -55,8 +72,9 @@ try {
     $stmt->execute([':id_pub' => $publicationId]);
     $commentaires = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
+    error_log("Erreur récupération commentaires: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
     $commentaires = [];
-    $_SESSION['error'] = "Erreur lors de la récupération des commentaires : " . $e->getMessage();
+    $_SESSION['error'] = "Erreur lors de la récupération des commentaires.";
 }
 ?>
 
@@ -65,7 +83,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Commentaires</title>
+    <title>Commentaires - EduShare</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -131,14 +149,15 @@ try {
     <div class="comment-container">
         <h2>Commentaires</h2>
         <?php if (isset($_SESSION['error'])): ?>
-            <div class="error"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
+            <div class="error"><?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?></div>
         <?php endif; ?>
         <?php if (isset($_SESSION['success'])): ?>
-            <div class="success"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
+            <div class="success"><?php echo htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?></div>
         <?php endif; ?>
 
         <!-- Formulaire pour ajouter un commentaire -->
         <form class="comment-form" method="POST" action="">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
             <textarea name="contenu" rows="4" placeholder="Ajouter un commentaire..." required></textarea>
             <button type="submit" name="comment_submit">Commenter</button>
         </form>
