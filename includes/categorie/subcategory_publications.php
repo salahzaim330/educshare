@@ -48,11 +48,14 @@ try {
         exit();
     }
 
-    // Fetch publications for the subcategory
+    // Fetch publications for the subcategory with comment count
     $stmt = $connexion->prepare("
-        SELECT p.id_pub, p.titre, p.date_pub, p.description, p.contenu
+        SELECT p.id_pub, p.titre, p.date_pub, p.description, p.contenu, 
+               COUNT(com.id) AS comment_count
         FROM publication p
+        LEFT JOIN Commentaire com ON p.id_pub = com.id_pub
         WHERE p.id_s_categorie = :id_s_categorie
+        GROUP BY p.id_pub
         ORDER BY p.date_pub DESC
     ");
     $stmt->execute(['id_s_categorie' => $id_s_categorie]);
@@ -80,10 +83,62 @@ try {
         .menu-icon { cursor: pointer; }
         .publication-card { transition: transform 0.2s; }
         .publication-card:hover { transform: translateY(-4px); }
+        /* Styles pour le lien des commentaires */
+        .comment-link {
+            color: #3b82f6;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .comment-link:hover {
+            text-decoration: underline;
+        }
+        /* Styles pour la modale */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 700px;
+            height: 80%;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        .modal-content iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #333;
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
+
+    <!-- Modale pour les commentaires -->
+    <div class="modal" id="commentModal">
+        <div class="modal-content">
+            <span class="close-modal">×</span>
+            <iframe id="commentFrame"></iframe>
+        </div>
+    </div>
 
     <script type="text/babel">
         // Header Component
@@ -101,8 +156,6 @@ try {
                     <nav className="flex gap-4">
                         <a href={dashboard} className="text-gray-700 hover:font-bold">Tableau de bord</a>
                         <a href="categories.php" className="text-gray-700 font-bold">Catégories</a>
-
-                        
                     </nav>
                     <div className="flex items-center gap-2">
                         <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>
@@ -119,6 +172,13 @@ try {
             const publications = <?php echo json_encode($publications); ?>;
             const dashboard = <?php echo json_encode($dashboard); ?>;
 
+            const openCommentModal = (pubId) => {
+                const modal = document.getElementById('commentModal');
+                const commentFrame = document.getElementById('commentFrame');
+                commentFrame.src = `../commentaire/commentaire.php?id_pub=${pubId}`;
+                modal.style.display = 'flex';
+            };
+
             return (
                 <main className="p-4">
                     <div className="max-w-4xl mx-auto">
@@ -128,12 +188,12 @@ try {
                             </h1>
                             <p className="text-gray-500">Voici toutes les publications pour cette sous-catégorie.</p>
                         </div>
-                        <?php if (isset($_SESSION['error'])): ?>
+                        {<?php if (isset($_SESSION['error'])): ?>
                             <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
                                 <?php echo htmlspecialchars($_SESSION['error']); ?>
                             </div>
                             <?php unset($_SESSION['error']); ?>
-                        <?php endif; ?>
+                        <?php endif; ?>}
                         {subcategory ? (
                             publications.length === 0 ? (
                                 <div className="bg-white border border-gray-300 rounded-md p-4 text-center">
@@ -147,6 +207,15 @@ try {
                                             <h3 className="text-lg font-bold">{pub.titre}</h3>
                                             <p className="text-gray-600 mb-2">{pub.description}</p>
                                             <p className="text-sm text-gray-500">Publié le : {new Date(pub.date_pub).toLocaleDateString('fr-FR')}</p>
+                                            <p className="text-sm text-gray-500">
+                                                <a
+                                                    href="#"
+                                                    className="comment-link"
+                                                    onClick={() => openCommentModal(pub.id_pub)}
+                                                >
+                                                    {pub.comment_count} commentaire(s)
+                                                </a>
+                                            </p>
                                             <a
                                                 href={pub.contenu}
                                                 download
@@ -182,6 +251,25 @@ try {
         // Render the App
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+
+        // Gestion de la modale
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('commentModal');
+            const commentFrame = document.getElementById('commentFrame');
+            const closeModal = document.querySelector('.close-modal');
+
+            closeModal.addEventListener('click', () => {
+                modal.style.display = 'none';
+                commentFrame.src = '';
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    commentFrame.src = '';
+                }
+            });
+        });
     </script>
 </body>
 </html>

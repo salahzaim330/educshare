@@ -57,7 +57,6 @@ CREATE TABLE Publication (
     description VARCHAR(255),
     date_pub DATE,
     contenu VARCHAR(255);
-    note FLOAT,
     id_enseignant INT,
     id_etudiant INT,
     id_s_categorie INT,
@@ -103,4 +102,16 @@ CREATE TABLE Signalement (
     id_pub INT,
     FOREIGN KEY (id_etudiant) REFERENCES Etudiant(id),
     FOREIGN KEY (id_pub) REFERENCES Publication(id_pub) -- Virgule supprimée ici
+);
+CREATE TABLE Note (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    valeur INT NOT NULL CHECK (valeur >= 1 AND valeur <= 5),
+    id_etudiant INT NULL,
+    id_enseignant INT NULL,
+    id_pub INT NOT NULL,
+    date_note DATE NOT NULL,
+    FOREIGN KEY (id_etudiant) REFERENCES Etudiant(id) ON DELETE SET NULL,
+    FOREIGN KEY (id_enseignant) REFERENCES Enseignant(id) ON DELETE SET NULL,
+    FOREIGN KEY (id_pub) REFERENCES Publication(id_pub) ON DELETE CASCADE,
+    CONSTRAINT unique_note UNIQUE (id_etudiant, id_enseignant, id_pub)
 );

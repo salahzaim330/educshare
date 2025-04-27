@@ -9,19 +9,78 @@ if (!isset($_SESSION['id']) || !isset($_SESSION['user_type']) || $_SESSION['user
     exit();
 }
 
-// Récupérer les publications de l'enseignant connecté avec le nombre de commentaires
+// Generate CSRF token if not set
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Handle note submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_note'])) {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $_SESSION['error'] = "Erreur de validation CSRF.";
+    } else {
+        $publicationId = filter_input(INPUT_POST, 'id_pub', FILTER_VALIDATE_INT);
+        $note = filter_input(INPUT_POST, 'note', FILTER_VALIDATE_INT);
+
+        if ($publicationId && $note >= 1 && $note <= 5) {
+            try {
+                $stmt = $connexion->prepare("
+                    INSERT INTO Note (valeur, id_enseignant, id_pub, date_note)
+                    VALUES (:valeur, :id_enseignant, :id_pub, CURDATE())
+                    ON DUPLICATE KEY UPDATE valeur = :valeur_update, date_note = CURDATE()
+                ");
+                $stmt->execute([
+                    ':valeur' => $note,
+                    ':id_enseignant' => $_SESSION['id'],
+                    ':id_pub' => $publicationId,
+                    ':valeur_update' => $note
+                ]);
+                $_SESSION['success'] = "Note enregistrée avec succès.";
+            } catch (PDOException $e) {
+                $_SESSION['error'] = "Erreur lors de l'enregistrement de la note : " . $e->getMessage();
+            }
+        } else {
+            $_SESSION['error'] = "Note invalide ou publication introuvable.";
+        }
+    }
+    header("Location: tableau_bord.php");
+    exit();
+}
+
+// Récupérer les publications de l'enseignant connecté avec le nombre de commentaires et la moyenne des notes
 try {
     $enseignantId = $_SESSION['id'];
     
-    $query = "SELECT p.*, s.nom AS sous_categorie, c.nom AS categorie, 
-                     COUNT(com.id) AS comment_count
-              FROM Publication p
-              JOIN Sous_categorie s ON p.id_s_categorie = s.id_s_categorie
-              JOIN Categorie c ON s.id_categorie = c.id_categorie
-              LEFT JOIN Commentaire com ON p.id_pub = com.id_pub
-              WHERE p.id_enseignant = :enseignantId
-              GROUP BY p.id_pub
-              ORDER BY p.date_pub DESC";
+    $query = "
+        SELECT 
+    p.id_pub, 
+    p.titre, 
+    p.description, 
+    p.date_pub, 
+    p.contenu, 
+    p.id_enseignant, 
+    p.id_s_categorie,
+    s.nom AS sous_categorie, 
+    c.nom AS categorie,
+    COALESCE(com.comment_count, 0) AS comment_count,
+    COALESCE(n.average_note, 0) AS average_note
+FROM Publication p
+JOIN Sous_categorie s ON p.id_s_categorie = s.id_s_categorie
+JOIN Categorie c ON s.id_categorie = c.id_categorie
+LEFT JOIN (
+    SELECT id_pub, COUNT(*) AS comment_count
+    FROM Commentaire
+    GROUP BY id_pub
+) com ON p.id_pub = com.id_pub
+LEFT JOIN (
+    SELECT id_pub, AVG(valeur) AS average_note
+    FROM Note
+    GROUP BY id_pub
+) n ON p.id_pub = n.id_pub
+WHERE p.id_enseignant = :enseignantId
+ORDER BY p.date_pub DESC;
+
+    ";
     
     $stmt = $connexion->prepare($query);
     $stmt->bindParam(':enseignantId', $enseignantId, PDO::PARAM_INT);
@@ -42,7 +101,6 @@ try {
     <title>EduShare - Tableau de bord Enseignant</title>
     <link rel="stylesheet" href="../../assets/css/tabBordenseignant.css">
     <style>
-        /* Styles repris de tabbordetudiant.php */
         .resource-card {
             background: white;
             border-radius: 8px;
@@ -52,7 +110,6 @@ try {
             justify-content: space-between;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
         .no-publications {
             text-align: center;
             padding: 2rem;
@@ -60,7 +117,6 @@ try {
             border-radius: 8px;
             margin-top: 1rem;
         }
-        
         .publish-btn {
             display: inline-block;
             background: #3b82f6;
@@ -70,9 +126,67 @@ try {
             text-decoration: none;
             margin-top: 1rem;
         }
-        
-        /* Styles pour les étoiles */
+        .content {
+            display: flex;
+            gap: 1rem;
+            flex-grow: 1;
+        }
+        .icon {
+            font-size: 2rem;
+        }
+        .view-btn {
+            align-self: center;
+            background: #10b981;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+        .comment-link {
+            color: #3b82f6;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .comment-link:hover {
+            text-decoration: underline;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 700px;
+            height: 80%;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        .modal-content iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #333;
+        }
         .star {
+            font-size: 1.2rem;
+            cursor: pointer;
             color: #e5e7eb;
         }
         .star.filled {
@@ -84,24 +198,19 @@ try {
             background-clip: text;
             color: transparent;
         }
-        
-        .content {
-            display: flex;
-            gap: 1rem;
-            flex-grow: 1;
+        .star:hover {
+            color: #d1d5db;
         }
-        
-        .icon {
-            font-size: 2rem;
+        .stars-container:hover .star {
+            color: #e5e7eb;
         }
-        
-        .view-btn {
-            align-self: center;
-            background: #10b981;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            text-decoration: none;
+        .stars-container .star:hover,
+        .stars-container .star:hover ~ .star {
+            color: #f59e0b;
+        }
+        .success-message {
+            color: green;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
@@ -154,6 +263,9 @@ try {
                 <?php if (isset($_SESSION['error'])): ?>
                     <div style="color: red;"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
                 <?php endif; ?>
+                <?php if (isset($_SESSION['success'])): ?>
+                    <div class="success-message"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
+                <?php endif; ?>
                 <?php if (empty($publications)): ?>
                     <div class="no-publications">
                         <p>Vous n'avez pas encore publié de ressources.</p>
@@ -185,26 +297,30 @@ try {
                                         <?php echo htmlspecialchars($pub['description']); ?>
                                     </p>
                                     <div class="rating">
-                                        <?php
-                                        $note = $pub['note'] ?? 0;
-                                        $fullStars = floor($note);
-                                        $hasHalfStar = ($note - $fullStars) >= 0.5;
-                                        
-                                        for ($i = 1; $i <= 5; $i++) {
-                                            if ($i <= $fullStars) {
-                                                echo '<span class="star filled">★</span>';
-                                            } elseif ($i == $fullStars + 1 && $hasHalfStar) {
-                                                echo '<span class="star half">★</span>';
-                                            } else {
-                                                echo '<span class="star">★</span>';
-                                            }
-                                        }
-                                        ?>
-                                        <span>(<?php echo number_format($note, 1); ?>)</span>
+                                        <form method="POST" action="">
+                                            <input type="hidden" name="id_pub" value="<?php echo $pub['id_pub']; ?>">
+                                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                                            <input type="hidden" name="submit_note" value="1">
+                                            <div class="stars-container flex">
+                                                <?php
+                                                $note = $pub['average_note'] ?? 0;
+                                                $fullStars = floor($note);
+                                                $hasHalfStar = ($note - $fullStars) >= 0.5;
+                                                for ($i = 1; $i <= 5; $i++):
+                                                ?>
+                                                    <span
+                                                        class="star <?php echo $i <= $fullStars ? 'filled' : ($i === $fullStars + 1 && $hasHalfStar ? 'half' : ''); ?>"
+                                                        onclick="this.parentNode.parentNode.querySelector('input[name=note]').value=<?php echo $i; ?>; this.parentNode.parentNode.submit();"
+                                                    >★</span>
+                                                <?php endfor; ?>
+                                                <input type="hidden" name="note" value="">
+                                            </div>
+                                            <span>(<?php echo number_format($note, 1); ?>)</span>
+                                        </form>
                                         <?php if (isset($pub['download_count'])): ?>
                                             <span>• <?php echo $pub['download_count']; ?> téléchargements</span>
                                         <?php endif; ?>
-                                        <span>• <?php echo $pub['comment_count']; ?> commentaire(s)</span>
+                                        <span>• <a href="#" class="comment-link" data-pub-id="<?php echo $pub['id_pub']; ?>"><?php echo $pub['comment_count']; ?> commentaire(s)</a></span>
                                     </div>
                                 </div>
                             </div>
@@ -214,6 +330,14 @@ try {
                 <?php endif; ?>
             </div>
         </main>
+    </div>
+
+    <!-- Modale pour les commentaires -->
+    <div class="modal" id="commentModal">
+        <div class="modal-content">
+            <span class="close-modal">×</span>
+            <iframe id="commentFrame"></iframe>
+        </div>
     </div>
 
     <script>
@@ -228,7 +352,34 @@ try {
                 });
             });
 
-            // Confirmation avant suppression (si vous ajoutez cette fonctionnalité)
+            // Gestion de la modale des commentaires
+            const modal = document.getElementById('commentModal');
+            const commentFrame = document.getElementById('commentFrame');
+            const closeModal = document.querySelector('.close-modal');
+            const commentLinks = document.querySelectorAll('.comment-link');
+
+            commentLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pubId = link.getAttribute('data-pub-id');
+                    commentFrame.src = `../../includes/commentaire/commentaire.php?id_pub=${pubId}`;
+                    modal.style.display = 'flex';
+                });
+            });
+
+            closeModal.addEventListener('click', () => {
+                modal.style.display = 'none';
+                commentFrame.src = '';
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    commentFrame.src = '';
+                }
+            });
+
+            // Confirmation avant suppression (si ajouté)
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     if (!confirm('Êtes-vous sûr de vouloir supprimer cette publication ?')) {
