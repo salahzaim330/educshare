@@ -198,7 +198,7 @@ try {
                             publications.length === 0 ? (
                                 <div className="bg-white border border-gray-300 rounded-md p-4 text-center">
                                     <p className="text-gray-500">Aucune publication trouvée pour cette sous-catégorie.</p>
-                                    <a href="publier.php" className="text-blue-600 hover:underline">Publier une nouvelle ressource</a>
+                                    <a href="../publier/publier.php" className="text-blue-600 hover:underline">Publier une nouvelle ressource</a>
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
