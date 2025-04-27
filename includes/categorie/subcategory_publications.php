@@ -30,6 +30,41 @@ if ($id_s_categorie <= 0) {
     exit();
 }
 
+// Handle note submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_note'])) {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $_SESSION['error'] = "Erreur de validation CSRF.";
+    } else {
+        $publicationId = filter_input(INPUT_POST, 'id_pub', FILTER_VALIDATE_INT);
+        $note = filter_input(INPUT_POST, 'note', FILTER_VALIDATE_INT);
+
+        if ($publicationId && $note >= 1 && $note <= 5) {
+            try {
+                $stmt = $connexion->prepare("
+                    INSERT INTO Note (valeur, id_etudiant, id_enseignant, id_pub, date_note)
+                    VALUES (:valeur, :id_etudiant, :id_enseignant, :id_pub, CURDATE())
+                    ON DUPLICATE KEY UPDATE valeur = :valeur_update, date_note = CURDATE()
+                ");
+                $stmt->execute([
+                    ':valeur' => $note,
+                    ':id_etudiant' => $_SESSION['user_type'] === 'etudiant' ? $_SESSION['id'] : null,
+                    ':id_enseignant' => $_SESSION['user_type'] === 'enseignant' ? $_SESSION['id'] : null,
+                    ':id_pub' => $publicationId,
+                    ':valeur_update' => $note
+                ]);
+                $_SESSION['success'] = "Note enregistrée avec succès.";
+            } catch (PDOException $e) {
+                error_log("Erreur enregistrement note: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+                $_SESSION['error'] = "Erreur lors de l'enregistrement de la note.";
+            }
+        } else {
+            $_SESSION['error'] = "Note invalide ou publication introuvable.";
+        }
+    }
+    header("Location: subcategory_publications.php?id_s_categorie=$id_s_categorie");
+    exit();
+}
+
 // Fetch subcategory details and publications
 try {
     // Fetch subcategory details
@@ -48,20 +83,35 @@ try {
         exit();
     }
 
-    // Fetch publications for the subcategory with comment count
+    // Fetch publications for the subcategory with comment count and average note
     $stmt = $connexion->prepare("
-        SELECT p.id_pub, p.titre, p.date_pub, p.description, p.contenu, 
-               COUNT(com.id) AS comment_count
+        SELECT 
+            p.id_pub, 
+            p.titre, 
+            p.date_pub, 
+            p.description, 
+            p.contenu, 
+            COUNT(com.id) AS comment_count,
+            COALESCE(AVG(n.valeur), 0) AS average_note
         FROM publication p
         LEFT JOIN Commentaire com ON p.id_pub = com.id_pub
+        LEFT JOIN Note n ON p.id_pub = n.id_pub
         WHERE p.id_s_categorie = :id_s_categorie
         GROUP BY p.id_pub
         ORDER BY p.date_pub DESC
     ");
     $stmt->execute(['id_s_categorie' => $id_s_categorie]);
     $publications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Verify file existence for each publication
+    foreach ($publications as &$pub) {
+        $file_path = __DIR__ . '/../../Uploads/publications/' . basename($pub['contenu']);
+        $pub['file_exists'] = file_exists($file_path);
+    }
+    unset($pub);
 } catch (PDOException $e) {
-    $_SESSION['error'] = "Erreur de base de données : " . $e->getMessage();
+    error_log("Erreur récupération données: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+    $_SESSION['error'] = "Erreur de base de données.";
     $subcategory = null;
     $publications = [];
 }
@@ -83,7 +133,6 @@ try {
         .menu-icon { cursor: pointer; }
         .publication-card { transition: transform 0.2s; }
         .publication-card:hover { transform: translateY(-4px); }
-        /* Styles pour le lien des commentaires */
         .comment-link {
             color: #3b82f6;
             text-decoration: none;
@@ -92,7 +141,6 @@ try {
         .comment-link:hover {
             text-decoration: underline;
         }
-        /* Styles pour la modale */
         .modal {
             display: none;
             position: fixed;
@@ -127,6 +175,31 @@ try {
             cursor: pointer;
             color: #333;
         }
+        .star {
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #e5e7eb;
+        }
+        .star.filled {
+            color: #f59e0b;
+        }
+        .star.half {
+            background: linear-gradient(90deg, #f59e0b 50%, #e5e7eb 50%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .star.preview {
+            color: #f59e0b;
+        }
+        .stars-container {
+            display: inline-flex;
+            gap: 2px;
+        }
+        .download-disabled {
+            background-color: #d1d5db;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -134,8 +207,8 @@ try {
 
     <!-- Modale pour les commentaires -->
     <div class="modal" id="commentModal">
-        <div class="modal-content">
-            <span class="close-modal">×</span>
+        <div className="modal-content">
+            <span className="close-modal">×</span>
             <iframe id="commentFrame"></iframe>
         </div>
     </div>
@@ -163,6 +236,61 @@ try {
                         <span className="text-gray-500">{userType}</span>
                     </div>
                 </header>
+            );
+        };
+
+        // StarRating Component
+        const StarRating = ({ pubId, averageNote }) => {
+            const [selected, setSelected] = React.useState(0);
+            const [hover, setHover] = React.useState(0);
+            const csrfToken = <?php echo json_encode($_SESSION['csrf_token']); ?>;
+
+            const handleSubmit = (value) => {
+                const formData = new FormData();
+                formData.append('id_pub', pubId);
+                formData.append('note', value);
+                formData.append('csrf_token', csrfToken);
+                formData.append('submit_note', '1');
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                }).then(() => {
+                    window.location.reload(); // Reload to update average note
+                }).catch(error => {
+                    console.error('Erreur soumission note:', error);
+                });
+            };
+
+            const fullStars = Math.floor(averageNote);
+            const hasHalfStar = averageNote - fullStars >= 0.5;
+
+            return (
+                <div className="stars-container">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                            key={star}
+                            className={`star ${
+                                hover >= star || selected >= star
+                                    ? 'preview'
+                                    : star <= fullStars
+                                    ? 'filled'
+                                    : star === fullStars + 1 && hasHalfStar
+                                    ? 'half'
+                                    : ''
+                            }`}
+                            onMouseOver={() => setHover(star)}
+                            onMouseOut={() => setHover(0)}
+                            onClick={() => {
+                                setSelected(star);
+                                handleSubmit(star);
+                            }}
+                        >
+                            ★
+                        </span>
+                    ))}
+                    <span className="ml-2 text-sm text-gray-500">({averageNote.toFixed(1)})</span>
+                </div>
             );
         };
 
@@ -194,6 +322,12 @@ try {
                             </div>
                             <?php unset($_SESSION['error']); ?>
                         <?php endif; ?>}
+                        {<?php if (isset($_SESSION['success'])): ?>
+                            <div className="bg-green-100 text-green-700 p-4 rounded mb-4">
+                                <?php echo htmlspecialchars($_SESSION['success']); ?>
+                            </div>
+                            <?php unset($_SESSION['success']); ?>
+                        <?php endif; ?>}
                         {subcategory ? (
                             publications.length === 0 ? (
                                 <div className="bg-white border border-gray-300 rounded-md p-4 text-center">
@@ -208,6 +342,9 @@ try {
                                             <p className="text-gray-600 mb-2">{pub.description}</p>
                                             <p className="text-sm text-gray-500">Publié le : {new Date(pub.date_pub).toLocaleDateString('fr-FR')}</p>
                                             <p className="text-sm text-gray-500">
+                                                <StarRating pubId={pub.id_pub} averageNote={parseFloat(pub.average_note)} />
+                                            </p>
+                                            <p className="text-sm text-gray-500">
                                                 <a
                                                     href="#"
                                                     className="comment-link"
@@ -216,13 +353,22 @@ try {
                                                     {pub.comment_count} commentaire(s)
                                                 </a>
                                             </p>
-                                            <a
-                                                href={pub.contenu}
-                                                download
-                                                className="inline-block mt-2 bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-900"
-                                            >
-                                                Télécharger
-                                            </a>
+                                            {pub.file_exists ? (
+                                                <a
+                                                    href={`../download.php?id_pub=${pub.id_pub}`}
+                                                    download
+                                                    className="inline-block mt-2 bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-900"
+                                                >
+                                                    Télécharger
+                                                </a>
+                                            ) : (
+                                                <span
+                                                    className="inline-block mt-2 bg-gray-400 text-white px-3 py-1 rounded download-disabled"
+                                                    title="Fichier non disponible"
+                                                >
+                                                    Télécharger
+                                                </span>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
