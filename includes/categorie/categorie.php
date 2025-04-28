@@ -45,7 +45,8 @@ try {
     $stmt->execute(['user_id' => $user_id]);
     $followed_subcategories = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (PDOException $e) {
-    $_SESSION['error'] = "Erreur de base de données : " . $e->getMessage();
+    error_log("Erreur récupération données: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+    $_SESSION['error'] = "Erreur de base de données.";
     $categories = [];
     $subcategories = [];
     $followed_subcategories = [];
@@ -55,37 +56,74 @@ try {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate CSRF token
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        $_SESSION['error'] = "Invalid CSRF token";
+        $_SESSION['error'] = "Erreur de validation CSRF.";
         header("Location: categories.php");
         exit();
     }
 
     $action = $_POST['action'] ?? '';
     $id_s_categorie = intval($_POST['id_s_categorie'] ?? 0);
-    
+    $user_id = $_SESSION['id'];
+    $user_type = $_SESSION['user_type'];
+
+    if ($id_s_categorie <= 0) {
+        $_SESSION['error'] = "Sous-catégorie invalide.";
+        header("Location: categories.php");
+        exit();
+    }
+
     try {
-        if ($action === 'follow' && $id_s_categorie > 0) {
+        // Verify subcategory exists
+        $stmt = $connexion->prepare("SELECT id_s_categorie FROM Sous_categorie WHERE id_s_categorie = :id_s_categorie");
+        $stmt->execute(['id_s_categorie' => $id_s_categorie]);
+        if (!$stmt->fetch()) {
+            $_SESSION['error'] = "Sous-catégorie introuvable.";
+            header("Location: categories.php");
+            exit();
+        }
+
+        if ($action === 'follow') {
             // Check if already followed
-            $stmt = $connexion->prepare("SELECT id FROM Suivre_sous_categorie WHERE $id_field = :user_id AND id_s_categorie = :id_s_categorie");
-            $stmt->execute(['user_id' => $user_id, 'id_s_categorie' => $id_s_categorie]);
+            $stmt = $connexion->prepare("
+                SELECT id FROM Suivre_sous_categorie 
+                WHERE id_s_categorie = :id_s_categorie 
+                AND (id_etudiant = :user_id OR id_enseignant = :user_id)
+            ");
+            $stmt->execute(['id_s_categorie' => $id_s_categorie, 'user_id' => $user_id]);
             if (!$stmt->fetch()) {
-                $stmt = $connexion->prepare("INSERT INTO Suivre_sous_categorie (id_s_categorie, $id_field) VALUES (:id_s_categorie, :user_id)");
-                $stmt->execute(['id_s_categorie' => $id_s_categorie, 'user_id' => $user_id]);
+                // Insert new follow record
+                $stmt = $connexion->prepare("
+                    INSERT INTO Suivre_sous_categorie (id_s_categorie, id_etudiant, id_enseignant)
+                    VALUES (:id_s_categorie, :id_etudiant, :id_enseignant)
+                ");
+                $stmt->execute([
+                    'id_s_categorie' => $id_s_categorie,
+                    'id_etudiant' => $user_type === 'etudiant' ? $user_id : null,
+                    'id_enseignant' => $user_type === 'enseignant' ? $user_id : null
+                ]);
                 $_SESSION['success'] = "Sous-catégorie suivie avec succès.";
             } else {
                 $_SESSION['error'] = "Vous suivez déjà cette sous-catégorie.";
             }
-        } elseif ($action === 'unfollow' && $id_s_categorie > 0) {
-            $stmt = $connexion->prepare("DELETE FROM Suivre_sous_categorie WHERE $id_field = :user_id AND id_s_categorie = :id_s_categorie");
-            $stmt->execute(['user_id' => $user_id, 'id_s_categorie' => $id_s_categorie]);
+        } elseif ($action === 'unfollow') {
+            // Delete follow record
+            $stmt = $connexion->prepare("
+                DELETE FROM Suivre_sous_categorie 
+                WHERE id_s_categorie = :id_s_categorie 
+                AND (id_etudiant = :user_id OR id_enseignant = :user_id)
+            ");
+            $stmt->execute(['id_s_categorie' => $id_s_categorie, 'user_id' => $user_id]);
             if ($stmt->rowCount() > 0) {
                 $_SESSION['success'] = "Sous-catégorie non suivie.";
             } else {
                 $_SESSION['error'] = "Vous ne suivez pas cette sous-catégorie.";
             }
+        } else {
+            $_SESSION['error'] = "Action invalide.";
         }
     } catch (PDOException $e) {
-        $_SESSION['error'] = "Erreur lors de l'opération : " . $e->getMessage();
+        error_log("Erreur opération suivi: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+        $_SESSION['error'] = "Erreur lors de l'opération de suivi.";
     }
     header("Location: categories.php");
     exit();
@@ -130,8 +168,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <nav className="flex gap-4">
                         <a href={dashboard} className="text-gray-700 hover:font-bold">Tableau de bord</a>
                         <a href="categories.php" className="text-gray-700 font-bold">Catégories</a>
-
-                        
                     </nav>
                     <div className="flex items-center gap-2">
                         <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>
@@ -191,18 +227,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <h1 className="text-2xl font-bold">Catégories</h1>
                             <p className="text-gray-500">Explorez les catégories et leurs sous-catégories.</p>
                         </div>
-                        <?php if (isset($_SESSION['success'])): ?>
+                        {<?php if (isset($_SESSION['success'])): ?>
                             <div className="bg-green-100 text-green-700 p-4 rounded mb-4">
                                 <?php echo htmlspecialchars($_SESSION['success']); ?>
                             </div>
                             <?php unset($_SESSION['success']); ?>
-                        <?php endif; ?>
-                        <?php if (isset($_SESSION['error'])): ?>
+                        <?php endif; ?>}
+                        {<?php if (isset($_SESSION['error'])): ?>
                             <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
                                 <?php echo htmlspecialchars($_SESSION['error']); ?>
                             </div>
                             <?php unset($_SESSION['error']); ?>
-                        <?php endif; ?>
+                        <?php endif; ?>}
                         {categories.length === 0 ? (
                             <div className="bg-white border border-gray-300 rounded-md p-4 text-center">
                                 <p className="text-gray-500">Aucune catégorie trouvée.</p>
