@@ -83,7 +83,7 @@ try {
         exit();
     }
 
-    // Fetch publications for the subcategory with comment count and average note
+    // Fetch publications with comment count, average note, and file extension
     $stmt = $connexion->prepare("
         SELECT 
             p.id_pub, 
@@ -92,7 +92,8 @@ try {
             p.description, 
             p.contenu, 
             COUNT(com.id) AS comment_count,
-            COALESCE(AVG(n.valeur), 0) AS average_note
+            COALESCE(AVG(n.valeur), 0) AS average_note,
+            LOWER(SUBSTRING_INDEX(p.contenu, '.', -1)) AS file_extension
         FROM publication p
         LEFT JOIN Commentaire com ON p.id_pub = com.id_pub
         LEFT JOIN Note n ON p.id_pub = n.id_pub
@@ -103,12 +104,12 @@ try {
     $stmt->execute(['id_s_categorie' => $id_s_categorie]);
     $publications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Verify file existence for each publication
+    // Ensure absolute URLs for contenu
     foreach ($publications as &$pub) {
-        $file_path = __DIR__ . '/../../Uploads/publications/' . basename($pub['contenu']);
-        $pub['file_exists'] = file_exists($file_path);
+        if (!empty($pub['contenu']) && !preg_match('#^https?://#', $pub['contenu'])) {
+            $pub['contenu'] = '/edushare/' . ltrim(str_replace('\\', '/', $pub['contenu']), '/');
+        }
     }
-    unset($pub);
 } catch (PDOException $e) {
     error_log("Erreur récupération données: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
     $_SESSION['error'] = "Erreur de base de données.";
@@ -156,16 +157,24 @@ try {
         .modal-content {
             background: white;
             width: 90%;
-            max-width: 700px;
+            max-width: 900px;
             height: 80%;
             border-radius: 8px;
-            overflow: hidden;
+            overflow: auto;
             position: relative;
         }
-        .modal-content iframe {
+        .modal-content iframe,
+        .modal-content img,
+        .modal-content video {
             width: 100%;
             height: 100%;
             border: none;
+            object-fit: contain;
+        }
+        .modal-content .error {
+            color: red;
+            padding: 20px;
+            text-align: center;
         }
         .close-modal {
             position: absolute;
@@ -196,20 +205,28 @@ try {
             display: inline-flex;
             gap: 2px;
         }
-        .download-disabled {
-            background-color: #d1d5db;
-            cursor: not-allowed;
+        .view-btn {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-left: 0.5rem;
+        }
+        .view-btn:hover {
+            background: #059669;
         }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
-    <!-- Modale pour les commentaires -->
-    <div class="modal" id="commentModal">
-        <div className="modal-content">
-            <span className="close-modal">×</span>
-            <iframe id="commentFrame"></iframe>
+    <!-- Modale pour commentaires et contenu -->
+    <div class="modal" id="contentModal">
+        <div class="modal-content">
+            <span class="close-modal">×</span>
+            <div id="modalContent"></div>
         </div>
     </div>
 
@@ -256,7 +273,7 @@ try {
                     method: 'POST',
                     body: formData
                 }).then(() => {
-                    window.location.reload(); // Reload to update average note
+                    window.location.reload();
                 }).catch(error => {
                     console.error('Erreur soumission note:', error);
                 });
@@ -301,10 +318,63 @@ try {
             const dashboard = <?php echo json_encode($dashboard); ?>;
 
             const openCommentModal = (pubId) => {
-                const modal = document.getElementById('commentModal');
-                const commentFrame = document.getElementById('commentFrame');
-                commentFrame.src = `../commentaire/commentaire.php?id_pub=${pubId}`;
+                console.log('Opening comment modal for pubId:', pubId);
+                const modal = document.getElementById('contentModal');
+                const modalContent = document.getElementById('modalContent');
+                modalContent.innerHTML = `<iframe id="commentFrame" src="../commentaire/commentaire.php?id_pub=${pubId}"></iframe>`;
                 modal.style.display = 'flex';
+            };
+
+            const openContentModal = (contentUrl, fileExtension) => {
+                console.log('Opening content modal:', { contentUrl, fileExtension });
+                const modal = document.getElementById('contentModal');
+                const modalContent = document.getElementById('modalContent');
+
+                // Normalize file extension
+                const ext = fileExtension ? fileExtension.toLowerCase().replace('.', '') : 'unknown';
+
+                // Extensions to open in a new tab
+                const newTabExtensions = ['pdf', 'docx'];
+
+                // Extensions viewable in modal
+                const viewableExtensions = {
+                    'png': () => `<img src="${contentUrl}" alt="Publication" onerror="this.parentNode.innerHTML='<p class=\\'error\\'>Erreur: Image introuvable.</p>'" />`,
+                    'jpg': () => `<img src="${contentUrl}" alt="Publication" onerror="this.parentNode.innerHTML='<p class=\\'error\\'>Erreur: Image introuvable.</p>'" />`,
+                    'jpeg': () => `<img src="${contentUrl}" alt="Publication" onerror="this.parentNode.innerHTML='<p class=\\'error\\'>Erreur: Image introuvable.</p>'" />`,
+                    'gif': () => `<img src="${contentUrl}" alt="Publication" onerror="this.parentNode.innerHTML='<p class=\\'error\\'>Erreur: Image introuvable.</p>'" />`,
+                    'mp4': () => `<video controls><source src="${contentUrl}" type="video/mp4" onerror="this.parentNode.innerHTML='<p class=\\'error\\'>Erreur: Vidéo introuvable.</p>'"></video>`,
+                    'avi': () => `<video controls><source src="${contentUrl}" type="video/avi" onerror="this.parentNode.innerHTML='<p class=\\'error\\'>Erreur: Vidéo introuvable.</p>'"></video>`
+                };
+
+                // Check if file exists before proceeding
+                fetch(contentUrl, { method: 'HEAD' })
+                    .then(res => {
+                        if (!res.ok) {
+                            modalContent.innerHTML = `<p class="error">Erreur: Fichier introuvable à ${contentUrl}</p>`;
+                            modal.style.display = 'flex';
+                        } else if (newTabExtensions.includes(ext)) {
+                            // Open PDF and DOCX in a new tab
+                            window.open(contentUrl, '_blank');
+                        } else if (viewableExtensions[ext]) {
+                            // Display viewable files in modal
+                            modalContent.innerHTML = viewableExtensions[ext]();
+                            modal.style.display = 'flex';
+                        } else {
+                            // Handle non-viewable, non-new-tab extensions
+                            modalContent.innerHTML = '<p class="error">Ce type de fichier ne peut pas être prévisualisé. Ouverture dans une nouvelle fenêtre...</p>';
+                            modal.style.display = 'flex';
+                            setTimeout(() => {
+                                window.open(contentUrl, '_blank');
+                                modal.style.display = 'none';
+                                modalContent.innerHTML = '';
+                            }, 2000);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Fetch error:', err);
+                        modalContent.innerHTML = `<p class="error">Erreur: Impossible de vérifier le fichier à ${contentUrl}</p>`;
+                        modal.style.display = 'flex';
+                    });
             };
 
             return (
@@ -353,22 +423,23 @@ try {
                                                     {pub.comment_count} commentaire(s)
                                                 </a>
                                             </p>
-                                            {pub.file_exists ? (
+                                            <div className="mt-2">
+                                                <p className="text-sm text-gray-500">Debug: contenu={pub.contenu}, extension={pub.file_extension}</p>
                                                 <a
-                                                    href={`../download.php?id_pub=${pub.id_pub}`}
+                                                    href={pub.contenu}
                                                     download
-                                                    className="inline-block mt-2 bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-900"
+                                                    className="inline-block bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-900"
                                                 >
                                                     Télécharger
                                                 </a>
-                                            ) : (
-                                                <span
-                                                    className="inline-block mt-2 bg-gray-400 text-white px-3 py-1 rounded download-disabled"
-                                                    title="Fichier non disponible"
+                                                <a
+                                                    href="#"
+                                                    className="view-btn"
+                                                    onClick={() => openContentModal(pub.contenu, pub.file_extension)}
                                                 >
-                                                    Télécharger
-                                                </span>
-                                            )}
+                                                    Consulter
+                                                </a>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -400,21 +471,27 @@ try {
 
         // Gestion de la modale
         document.addEventListener('DOMContentLoaded', () => {
-            const modal = document.getElementById('commentModal');
-            const commentFrame = document.getElementById('commentFrame');
+            const modal = document.getElementById('contentModal');
+            const modalContent = document.getElementById('modalContent');
             const closeModal = document.querySelector('.close-modal');
 
-            closeModal.addEventListener('click', () => {
-                modal.style.display = 'none';
-                commentFrame.src = '';
-            });
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
+            if (closeModal) {
+                closeModal.addEventListener('click', () => {
+                    console.log('Closing modal');
                     modal.style.display = 'none';
-                    commentFrame.src = '';
-                }
-            });
+                    modalContent.innerHTML = '';
+                });
+            }
+
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        console.log('Closing modal via background click');
+                        modal.style.display = 'none';
+                        modalContent.innerHTML = '';
+                    }
+                });
+            }
         });
     </script>
 </body>
