@@ -246,6 +246,9 @@ try {
                     <nav className="flex gap-4">
                         <a href={dashboard} className="text-gray-700 hover:font-bold">Tableau de bord</a>
                         <a href="categories.php" className="text-gray-700 font-bold">Catégories</a>
+                        {userType === 'enseignant' && (
+                            <a href="../../includes/gestion/gestion.php" className="text-gray-700 hover:font-bold">Gestion</a>
+                        )}
                     </nav>
                     <div className="flex items-center gap-2">
                         <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>

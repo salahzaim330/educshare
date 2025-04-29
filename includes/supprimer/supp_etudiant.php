@@ -1,7 +1,7 @@
 <?php
 session_start();
-require '../../auth/db.php';
-require '..../auth/auth.php';
+require_once '../../auth/db.php';
+require_once '../../auth/auth.php';
 
 if(!isset($_GET['id']) || empty($_GET['id'])){
     die ('id non recupere');
@@ -23,5 +23,5 @@ if($del->rowCount() == 0){
     die ('erreur de suppression');
 }
 
-header('Location:../../gestion.php');
+header('Location:../gestion/gestion.php');
 exit;

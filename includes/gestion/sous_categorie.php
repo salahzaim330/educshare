@@ -1,11 +1,11 @@
 <?php
 session_start();
-require_once __DIR__ . '/../../auth/db.php';
-require_once __DIR__ . '/../../auth/auth.php';
+require_once  '../../auth/db.php';
+require_once '../../auth/auth.php';
 
 // Vérifier si l'utilisateur est connecté et est un enseignant
 if (!isset($_SESSION['id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'enseignant') {
-    header('Location: /auth/login.php');
+    header('Location: ../../auth/login.php');
     exit;
 }
 
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
                 ]);
                 $message = '<div class="alert alert-success">Sous-catégorie ajoutée avec succès.</div>';
             }
-            header('Location: /includes/gestion/gestion.php');
+            header('Location: ../../includes/gestion/gestion.php');
             exit;
         }
     } catch (PDOException $e) {
@@ -75,7 +75,7 @@ if (isset($_GET['delete'])) {
         $stmt = $connexion->prepare('DELETE FROM Sous_categorie WHERE id_s_categorie = :id');
         $stmt->execute([':id' => $_GET['delete']]);
         $message = '<div class="alert alert-success">Sous-catégorie supprimée avec succès.</div>';
-        header('Location: /includes/gestion/gestion.php');
+        header('Location: ../../includes/gestion/gestion.php');
         exit;
     } catch (PDOException $e) {
         error_log("Erreur DB: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
@@ -103,69 +103,233 @@ if (isset($_GET['edit'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EduShare - Gestion des sous-catégories</title>
-    <link rel="stylesheet" href="/assets/css/gestionplatform.css">
     <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: Arial, sans-serif;
+        /* Variables CSS pour cohérence avec tabBordenseignant.css */
+        :root {
+            --primary-color: #4a6fdc;
+            --primary-hover: #3a5fc6;
+            --gray-light: #e5e7eb;
+            --gray-medium: #d1d5db;
+            --gray-dark: #6b7280;
+            --background: #f3f4f6;
+            --white: #ffffff;
+            --success-bg: #d4edda;
+            --success-border: #c3e6cb;
+            --success-text: #155724;
+            --danger-bg: #f8d7da;
+            --danger-border: #f5c6cb;
+            --danger-text: #721c24;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.2s ease;
         }
+
+        /* Reset et base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--background);
+            color: #1f2937;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 40px;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 1rem 2rem;
+            background-color: var(--white);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
+
         .header .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            transition: var(--transition);
         }
-        .main-content {
-            padding: 40px;
+
+        .header .logo:hover {
+            transform: scale(1.05);
         }
-        .form-container {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
-            margin: 0 auto;
-        }
+
         .btn-back {
-            margin-bottom: 20px;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--gray-medium);
+            border-radius: 0.375rem;
+            color: var(--gray-dark);
+            text-decoration: none;
+            transition: var(--transition);
         }
+
+        .btn-back:hover {
+            background-color: var(--gray-light);
+            transform: translateY(-2px);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Form Container */
+        .form-container {
+            background-color: var(--white);
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease;
+        }
+
+        .form-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .form-container h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        /* Form Group */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--gray-dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-medium);
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            transition: var(--transition);
+            background-color: var(--white);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 111, 220, 0.2);
+        }
+
+        .form-control::placeholder {
+            color: var(--gray-medium);
+        }
+
+        select.form-control {
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 12l-6-6h12l-6 6z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1rem;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Submit Button */
         .btn-submit {
-            background-color: #4a6fdc;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 5px;
+            background-color: var(--primary-color);
+            color: var(--white);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
             border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
+
         .btn-submit:hover {
-            background-color: #3a5fc6;
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        /* Alerts */
         .alert {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
         }
+
         .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background-color: var(--success-bg);
+            color: var(--success-text);
+            border: 1px solid var(--success-border);
         }
+
         .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background-color: var(--danger-bg);
+            color: var(--danger-text);
+            border: 1px solid var(--danger-border);
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive Design */
         @media (max-width: 576px) {
             .main-content {
-                padding: 20px;
+                padding: 1rem;
             }
+
             .form-container {
-                padding: 20px;
+                padding: 1.5rem;
+            }
+
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .btn-back {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+            }
+
+            .btn-submit {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+                width: 100%;
             }
         }
     </style>
@@ -173,7 +337,7 @@ if (isset($_GET['edit'])) {
 <body>
     <div class="header">
         <div class="logo">EduShare</div>
-        <a href="gestion.php" class="btn btn-outline-secondary">Retour à la gestion</a>
+        <a href="gestion.php" class="btn-back">Retour à la gestion</a>
     </div>
 
     <div class="main-content">
@@ -182,7 +346,7 @@ if (isset($_GET['edit'])) {
             <?php if (!empty($message)): ?>
                 <?php echo $message; ?>
             <?php endif; ?>
-            <form action="/includes/gestion/sous_categorie.php" method="POST">
+            <form action="sous_categorie.php" method="POST">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                 <?php if (isset($sous_categorie)): ?>
                     <input type="hidden" name="id_s_categorie" value="<?php echo htmlspecialchars($sous_categorie['id_s_categorie']); ?>">
@@ -206,7 +370,7 @@ if (isset($_GET['edit'])) {
                     <label for="description">Description</label>
                     <textarea class="form-control" name="description" id="description" rows="3" required><?php echo isset($sous_categorie) ? htmlspecialchars($sous_categorie['description']) : ''; ?></textarea>
                 </div>
-                <button type="submit" class="btn btn-submit"><?php echo isset($sous_categorie) ? 'Modifier' : 'Ajouter'; ?></button>
+                <button type="submit" class="btn-submit"><?php echo isset($sous_categorie) ? 'Modifier' : 'Ajouter'; ?></button>
             </form>
         </div>
     </div>

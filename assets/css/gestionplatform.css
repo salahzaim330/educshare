@@ -1,14 +1,28 @@
 /* Reset et styles de base */
+:root {
+    --primary-color: #4a6fdc;
+    --primary-hover: #3a5fc6;
+    --danger-color: #000000; /* Changed to black for Supprimer */
+    --danger-hover: #333333; /* Darker gray for hover */
+    --gray-light: #e5e7eb;
+    --gray-medium: #d1d5db;
+    --gray-dark: #6b7280;
+    --background: #f3f4f6;
+    --white: #ffffff;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-    background-color: #f3f4f6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: var(--background);
     color: #1f2937;
+    font-size: 1rem;
+    line-height: 1.5;
 }
 
 /* Styles d'en-tête */
@@ -17,13 +31,13 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 1rem 2rem;
-    background-color: white;
-    border-bottom: 1px solid #e5e7eb;
+    background-color: var(--white);
+    border-bottom: 1px solid var(--gray-light);
 }
 
 .logo {
     font-size: 1.5rem;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 nav {
@@ -33,8 +47,9 @@ nav {
 
 nav a {
     text-decoration: none;
-    color: #6b7280;
+    color: var(--gray-dark);
     padding: 0.5rem 0;
+    transition: color 0.2s;
 }
 
 nav a.active {
@@ -51,17 +66,17 @@ nav a.active {
 
 .notification {
     position: absolute;
-    top: -8px;
-    right: 13rem;
+    top: -0.5rem;
+    right: -0.5rem;
     background-color: #10b981;
-    color: white;
+    color: var(--white);
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    width: 1.25rem;
+    height: 1.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
 }
 
 .user-name {
@@ -69,13 +84,13 @@ nav a.active {
 }
 
 .user-role {
-    font-size: 0.85rem;
-    color: #6b7280;
+    font-size: 0.875rem;
+    color: var(--gray-dark);
 }
 
 /* Styles de contenu */
 .container {
-    max-width: 1200px;
+    max-width: 75rem;
     margin: 0 auto;
     padding: 2rem;
 }
@@ -88,40 +103,46 @@ nav a.active {
 }
 
 h1 {
-    font-size: 1.8rem;
+    font-size: 1.875rem;
     font-weight: 600;
 }
 
+/* Boutons */
 .btn {
     padding: 0.5rem 1rem;
     border-radius: 0.375rem;
-    font-size: 0.9rem;
+    font-size: 1rem;
     cursor: pointer;
     border: none;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    line-height: 1.5;
+    min-height: 2.5rem; /* Consistent height */
 }
 
 .btn-outline {
-    background-color: white;
-    border: 1px solid #d1d5db;
+    background-color: var(--white);
+    border: 1px solid var(--primary-color); /* Blue border for Modifier */
+    color: var(--primary-color); /* Blue text */
 }
 
 .btn-outline:hover {
-    background-color: #f9fafb;
+    background-color: #eff6ff; /* Light blue hover */
+    border-color: var(--primary-hover);
+    color: var(--primary-hover);
 }
 
 .btn-primary {
-    background-color: #111827;
-    color: white;
+    background-color: var(--primary-color);
+    color: var(--white);
 }
 
 .btn-primary:hover {
-    background-color: #374151;
+    background-color: var(--primary-hover);
 }
 
 /* Styles de carte */
 .card {
-    background-color: white;
+    background-color: var(--white);
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     margin-bottom: 1.5rem;
@@ -139,20 +160,27 @@ h1 {
 /* Styles d'onglets */
 .tabs {
     display: flex;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--gray-light);
+    margin-bottom: 1.25rem;
 }
 
 .tab {
-    padding: 1rem 1.5rem;
+    padding: 0.625rem 1.25rem;
     cursor: pointer;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--gray-dark);
     border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
 }
 
 .tab.active {
-    color: #111827;
-    border-bottom: 2px solid #111827;
+    color: #1f2937;
+    border-bottom: 2px solid var(--primary-color);
+    font-weight: 600;
+}
+
+.tab-content.hidden {
+    display: none;
 }
 
 /* Styles de tableau */
@@ -161,7 +189,8 @@ h1 {
     border-collapse: collapse;
 }
 
-.table th, .table td {
+.table th,
+.table td {
     padding: 0.75rem 1rem;
     text-align: left;
     border-bottom: 1px solid #f3f4f6;
@@ -169,7 +198,7 @@ h1 {
 
 .table th {
     font-weight: 500;
-    color: #6b7280;
+    color: var(--gray-dark);
 }
 
 .table tr:hover {
@@ -190,7 +219,7 @@ h1 {
 .form-control {
     width: 100%;
     padding: 0.625rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--gray-medium);
     border-radius: 0.375rem;
     font-size: 1rem;
 }
@@ -201,7 +230,7 @@ h1 {
 
 .form-control:focus {
     outline: none;
-    border-color: #6b7280;
+    border-color: var(--gray-dark);
     box-shadow: 0 0 0 1px rgba(107, 114, 128, 0.2);
 }
 
@@ -210,30 +239,30 @@ h1 {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
+    width: 100%;
+    height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     z-index: 1000;
 }
 
 .modal {
-    background-color: white;
+    background-color: var(--white);
     border-radius: 0.5rem;
     width: 100%;
-    max-width: 500px;
+    max-width: 31.25rem;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    position: relative;
+    overflow: hidden;
 }
 
 .modal-header {
-    padding: 1.25rem;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 1rem;
+    border-bottom: 1px solid var(--gray-light);
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
 }
 
 .modal-title {
@@ -244,8 +273,9 @@ h1 {
 .modal-close {
     background: none;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     cursor: pointer;
+    color: #4b5563;
 }
 
 .modal-body {
@@ -258,23 +288,28 @@ h1 {
 }
 
 .modal-footer {
-    padding: 1rem 1.5rem;
+    padding: 1rem;
+    border-top: 1px solid var(--gray-light);
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
+/* Actions */
 .actions {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: nowrap; /* Prevent wrapping */
+    align-items: center; /* Vertical alignment */
 }
 
 .action-btn {
-    padding: 0.375rem 0.5rem;
+    padding: 0.375rem 0.75rem;
     border-radius: 0.25rem;
-    border: 1px solid #d1d5db;
-    background-color: white;
+    border: 1px solid var(--gray-medium);
+    background-color: var(--white);
     cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .action-btn:hover {
@@ -282,12 +317,34 @@ h1 {
 }
 
 .action-btn-danger {
-    border-color: #ef4444;
-    color: #ef4444;
+    border-color: var(--danger-color); /* Black border */
+    color: var(--danger-color); /* Black text */
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .action-btn-danger:hover {
-    background-color: #fef2f2;
+    background-color: #f3f3f3; /* Light gray hover */
+    border-color: var(--danger-hover);
+    color: var(--danger-hover);
+}
+
+/* Alertes */
+.alert {
+    padding: 0.625rem;
+    border-radius: 0.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
 }
 
 /* Utilitaires */
@@ -305,4 +362,52 @@ h1 {
 
 .hidden {
     display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    nav {
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+        text-align: center;
+    }
+
+    .container {
+        padding: 1rem;
+    }
+
+    .modal {
+        max-width: 90%;
+    }
+
+    .tabs {
+        flex-direction: column;
+    }
+
+    .tab {
+        padding: 0.5rem;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    .actions {
+        gap: 0.25rem; /* Smaller gap on mobile */
+    }
+
+    .btn, .action-btn, .action-btn-danger {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        min-height: 2rem; /* Smaller buttons */
+    }
 }

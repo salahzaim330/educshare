@@ -1,11 +1,11 @@
 <?php
 session_start();
-require_once __DIR__ . '/../../auth/db.php';
-require_once __DIR__ . '/../../auth/auth.php';
+require_once '../../auth/db.php';
+require_once '../../auth/auth.php';
 
 // Vérifier que l'utilisateur est connecté et est un enseignant
 if (!isset($_SESSION['id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'enseignant') {
-    header('Location: /auth/login.php');
+    header('Location: ../../auth/login.php');
     exit;
 }
 
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
                     'id_enseignant' => $_SESSION['id']
                 ]);
                 $message = '<div class="alert alert-success">Catégorie ajoutée avec succès.</div>';
-                header('Location: /includes/gestion/gestion.php');
+                header('Location: gestion.php');
                 exit;
             }
         }
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
                     'id_enseignant' => $_SESSION['id']
                 ]);
                 $message = '<div class="alert alert-success">Sous-catégorie ajoutée avec succès.</div>';
-                header('Location: /includes/gestion/gestion.php');
+                header('Location: gestion.php');
                 exit;
             }
         }
@@ -98,105 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EduShare - Gestion de la plateforme</title>
     <link rel="stylesheet" href="../../assets/css/gestionplatform.css">
-    <style>
-        .alert {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal {
-            background: white;
-            border-radius: 8px;
-            width: 500px;
-            max-width: 90%;
-            overflow: hidden;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-        }
-        .modal-body {
-            padding: 15px;
-        }
-        .modal-footer {
-            padding: 15px;
-            border-top: 1px solid #eee;
-            text-align: right;
-        }
-        .hidden {
-            display: none;
-        }
-        .btn-primary {
-            background-color: #4a6fdc;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .btn-primary:hover {
-            background-color: #3a5fc6;
-        }
-        .btn-outline {
-            background-color: #343a40;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .btn-outline:hover {
-            background-color: #23272b;
-        }
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 20px;
-        }
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-        .tab.active {
-            border-bottom: 2px solid #4a6fdc;
-            font-weight: bold;
-        }
-        .tab-content.hidden {
-            display: none;
-        }
-    </style>
+    
 </head>
 <body>
     <header>
@@ -204,9 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
             <span>EduShare</span>
         </div>
         <nav>
-            <a href="/pages/enseignant/tableau_bord_enseignant.php">Tableau de bord</a>
-            <a href="/pages/enseignant/categories.php">Catégories</a>
-            <a href="/includes/gestion/gestion.php" class="active">Gestion</a>
+            <a href="../../pages/enseignant/tableau_bord.php">Tableau de bord</a>
+            <a href="../categorie/categorie.php">Catégories</a>
+            <a href="../../includes/gestion/gestion.php" class="active">Gestion</a>
         </nav>
         <div class="user-profile">
             <span class="notification">0</span>
@@ -265,8 +167,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
                                         <td><?php echo htmlspecialchars($cat['description']); ?></td>
                                         <td><?php echo htmlspecialchars($cat['enseignant_nom'] ?? 'Inconnu'); ?></td>
                                         <td>
-                                            <a href="/includes/gestion/categorie.php?edit=<?php echo htmlspecialchars($cat['id_categorie']); ?>" class="btn btn-primary">Modifier</a>
-                                            <a href="/includes/gestion/categorie.php?delete=<?php echo htmlspecialchars($cat['id_categorie']); ?>" class="btn btn-outline" onclick="return confirm('Voulez-vous supprimer cette catégorie ?')">Supprimer</a>
+                                            <a href="./categorie.php?edit=<?php echo htmlspecialchars($cat['id_categorie']); ?>" class="btn btn-primary">Modifier</a>
+                                            <a href="../supprimer/supp_categorie.php?delete=<?php echo htmlspecialchars($cat['id_categorie']); ?>" class="btn btn-outline" onclick="return confirm('Voulez-vous supprimer cette catégorie ?')">Supprimer</a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -355,7 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
                                         <td><?php echo htmlspecialchars($ens['email']); ?></td>
                                         <td>Enseignant</td>
                                         <td>
-                                            <a href="/includes/supprimer/supp_enseignant.php?id=<?php echo htmlspecialchars($ens['id']); ?>" class="btn btn-outline" onclick="return confirm('Voulez-vous supprimer cet enseignant ?')">Supprimer</a>
+                                            <a href="../supprimer/supp_enseignant.php?id=<?php echo htmlspecialchars($ens['id']); ?>" class="btn btn-outline" onclick="return confirm('Voulez-vous supprimer cet enseignant ?')">Supprimer</a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -365,7 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
                                         <td><?php echo htmlspecialchars($etud['email']); ?></td>
                                         <td>Étudiant</td>
                                         <td>
-                                            <a href="/includes/supprimer/supp_etudiant.php?id=<?php echo htmlspecialchars($etud['id']); ?>" class="btn btn-outline" onclick="return confirm('Voulez-vous supprimer cet étudiant ?')">Supprimer</a>
+                                            <a href="../supprimer/supp_etudiant.php?id=<?php echo htmlspecialchars($etud['id']); ?>" class="btn btn-outline" onclick="return confirm('Voulez-vous supprimer cet étudiant ?')">Supprimer</a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -382,7 +284,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
                     <h3 class="modal-title">Ajouter une nouvelle catégorie</h3>
                     <button class="modal-close" id="close-modal-categorie">×</button>
                 </div>
-                <form action="/includes/gestion/gestion.php" method="POST">
+                <form action="gestion.php" method="POST">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <div class="modal-body">
                         <p class="modal-text">Créez une nouvelle catégorie pour organiser les ressources pédagogiques.</p>
@@ -409,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
                     <h3 class="modal-title">Ajouter une nouvelle sous-catégorie</h3>
                     <button class="modal-close" id="close-modal-sous-categorie">×</button>
                 </div>
-                <form action="/includes/gestion/gestion.php" method="POST">
+                <form action="gestion.php" method="POST">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <div class="modal-body">
                         <p class="modal-text">Créez une nouvelle sous-catégorie pour organiser les ressources pédagogiques.</p>
