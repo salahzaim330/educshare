@@ -129,19 +129,46 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
     <style>
-        body { background-color: #f5f5f5; }
-        header { box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1); }
-        .menu-icon { cursor: pointer; }
-        .publication-card { transition: transform 0.2s; }
-        .publication-card:hover { transform: translateY(-4px); }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+        }
+
+        header {
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+        }
+
+        .menu-icon {
+            cursor: pointer;
+        }
+
+        .publication-card {
+            transition: transform 0.2s ease;
+        }
+
+        .publication-card:hover {
+            transform: translateY(-4px);
+        }
+
         .comment-link {
             color: #3b82f6;
             text-decoration: none;
             cursor: pointer;
+            transition: text-decoration 0.2s ease;
         }
+
         .comment-link:hover {
             text-decoration: underline;
         }
+
         .modal {
             display: none;
             position: fixed;
@@ -149,33 +176,45 @@ try {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             justify-content: center;
             align-items: center;
             z-index: 1000;
         }
+
         .modal-content {
             background: white;
             width: 90%;
-            max-width: 900px;
-            height: 80%;
+            max-width: 800px;
+            min-height: 400px;
             border-radius: 8px;
-            overflow: auto;
             position: relative;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
-        .modal-content iframe,
+
+        .modal-content iframe {
+            width: 100%;
+            min-height: 500px; /* Ensure enough height for comment window */
+            border: none;
+            flex-grow: 1;
+        }
+
         .modal-content img,
         .modal-content video {
             width: 100%;
-            height: 100%;
-            border: none;
+            max-height: 80vh;
             object-fit: contain;
         }
+
         .modal-content .error {
-            color: red;
+            color: #ef4444;
             padding: 20px;
             text-align: center;
+            font-size: 16px;
         }
+
         .close-modal {
             position: absolute;
             top: 10px;
@@ -183,28 +222,47 @@ try {
             font-size: 24px;
             cursor: pointer;
             color: #333;
+            transition: color 0.2s ease;
         }
+
+        .close-modal:hover {
+            color: #000;
+        }
+
         .star {
             font-size: 1.2rem;
             cursor: pointer;
             color: #e5e7eb;
         }
+
         .star.filled {
             color: #f59e0b;
         }
+
         .star.half {
-            background: linear-gradient(90deg, #f59e0b 50%, #e5e7eb 50%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
+            color: #f59e0b;
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
         }
+
+        .star.half::before {
+            content: '\2605';
+            position: absolute;
+            color: #e5e7eb;
+            width: 50%;
+            overflow: hidden;
+        }
+
         .star.preview {
             color: #f59e0b;
         }
+
         .stars-container {
             display: inline-flex;
             gap: 2px;
         }
+
         .view-btn {
             display: inline-block;
             background: #10b981;
@@ -213,9 +271,42 @@ try {
             border-radius: 4px;
             text-decoration: none;
             margin-left: 0.5rem;
+            transition: background-color 0.2s ease;
         }
+
         .view-btn:hover {
             background: #059669;
+        }
+
+        @media (max-width: 600px) {
+            .modal-content {
+                width: 95%;
+                min-height: 300px;
+                padding: 15px;
+            }
+
+            .modal-content iframe {
+                min-height: 400px;
+            }
+
+            .publication-card {
+                transform: none;
+            }
+
+            .publication-card:hover {
+                transform: none;
+            }
+
+            .view-btn {
+                padding: 0.5rem 1rem;
+                width: 100%;
+                text-align: center;
+                margin: 0.5rem 0;
+            }
+
+            .stars-container {
+                font-size: 1rem;
+            }
         }
     </style>
 </head>
@@ -247,7 +338,7 @@ try {
                         <a href={dashboard} className="text-gray-700 hover:font-bold">Tableau de bord</a>
                         <a href="categories.php" className="text-gray-700 font-bold">Catégories</a>
                         {userType === 'enseignant' && (
-                            <a href="../../includes/gestion/gestion.php" className="text-gray-700 hover:font-bold">Gestion</a>
+                            <a href="../gestion/gestion.php" className="text-gray-700 hover:font-bold">Gestion</a>
                         )}
                     </nav>
                     <div className="flex items-center gap-2">
@@ -324,8 +415,21 @@ try {
                 console.log('Opening comment modal for pubId:', pubId);
                 const modal = document.getElementById('contentModal');
                 const modalContent = document.getElementById('modalContent');
-                modalContent.innerHTML = `<iframe id="commentFrame" src="../commentaire/commentaire.php?id_pub=${pubId}"></iframe>`;
+                modalContent.innerHTML = `<iframe id="commentFrame" src="../commentaire/commentaire.php?id_pub=${pubId}" style="width: 100%; min-height: 500px; border: none;"></iframe>`;
                 modal.style.display = 'flex';
+                // Ensure iframe content is fully loaded
+                const iframe = modalContent.querySelector('#commentFrame');
+                iframe.onload = () => {
+                    console.log('Comment iframe loaded successfully');
+                    // Attempt to adjust iframe height to content (if accessible)
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        const contentHeight = iframeDoc.body.scrollHeight;
+                        iframe.style.height = `${contentHeight}px`;
+                    } catch (e) {
+                        console.warn('Cannot adjust iframe height due to cross-origin restrictions:', e);
+                    }
+                };
             };
 
             const openContentModal = (contentUrl, fileExtension) => {
@@ -356,14 +460,11 @@ try {
                             modalContent.innerHTML = `<p class="error">Erreur: Fichier introuvable à ${contentUrl}</p>`;
                             modal.style.display = 'flex';
                         } else if (newTabExtensions.includes(ext)) {
-                            // Open PDF and DOCX in a new tab
                             window.open(contentUrl, '_blank');
                         } else if (viewableExtensions[ext]) {
-                            // Display viewable files in modal
                             modalContent.innerHTML = viewableExtensions[ext]();
                             modal.style.display = 'flex';
                         } else {
-                            // Handle non-viewable, non-new-tab extensions
                             modalContent.innerHTML = '<p class="error">Ce type de fichier ne peut pas être prévisualisé. Ouverture dans une nouvelle fenêtre...</p>';
                             modal.style.display = 'flex';
                             setTimeout(() => {

@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
     <div class="container">
         <div class="header-action">
             <h1>Gestion de la plateforme</h1>
-            <a href="/pages/enseignant/tableau_bord_enseignant.php" class="btn btn-outline">← Retour au tableau de bord</a>
+            <a href="../../pages/enseignant/tableau_bord.php" class="btn btn-outline">← Retour au tableau de bord</a>
         </div>
 
         <?php if (!empty($message)): ?>
