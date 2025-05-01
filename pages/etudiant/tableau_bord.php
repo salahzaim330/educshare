@@ -204,7 +204,7 @@ try {
                                             </div>
                                         </form>
                                         <span>(<?php echo number_format($note, 1); ?>)</span>
-                                        <span>• <a href="#" class="comment-link" data-pub-id="<?php echo $pub['id_pub']; ?>"><?php echo $pub['comment_count']; ?> commentaire(s)</a></span>
+                                        <span>• <a href="#" class="comment-link" data-pub-id="<?php echo $pub['id_pub']; ?>"><?php echo $pub['comment_count']; ?> commentaires</a></span>
                                     </div>
                                 </div>
                             </div>
