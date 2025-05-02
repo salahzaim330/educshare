@@ -45,10 +45,11 @@ CREATE TABLE Suivre_sous_categorie(
     id_s_categorie INT,
     id_enseignant INT,
     id_etudiant INT,
+    FOREIGN KEY (id_enseignant) REFERENCES Sous_categorie (id_s_categorie),
     FOREIGN KEY (id_enseignant) REFERENCES Enseignant(id),
     FOREIGN KEY (id_etudiant) REFERENCES Etudiant(id)
 
-)
+);
 
 -- Table Publication (peut être créée par un étudiant ou un enseignant, et liée à une sous-catégorie)
 CREATE TABLE Publication (

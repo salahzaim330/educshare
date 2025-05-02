@@ -63,7 +63,8 @@ try {
             s.nom AS sous_categorie, 
             c.nom AS categorie,
             COALESCE(com.comment_count, 0) AS comment_count,
-            COALESCE(n.average_note, 0) AS average_note
+            COALESCE(n.average_note, 0) AS average_note,
+            LOWER(SUBSTRING_INDEX(p.contenu, '.', -1)) AS file_extension
         FROM Publication p
         JOIN Sous_categorie s ON p.id_s_categorie = s.id_s_categorie
         JOIN Categorie c ON s.id_categorie = c.id_categorie
@@ -85,7 +86,13 @@ try {
     $stmt->bindParam(':etudiantId', $etudiantId, PDO::PARAM_INT);
     $stmt->execute();
     $publications = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
+    // Ensure absolute URLs for contenu
+    foreach ($publications as &$pub) {
+        if (!empty($pub['contenu']) && !preg_match('#^https?://#', $pub['contenu'])) {
+            $pub['contenu'] = '/edushare/' . ltrim(str_replace('\\', '/', $pub['contenu']), '/');
+        }
+    }
 } catch (PDOException $e) {
     error_log("Erreur récupération publications: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
     $publications = [];
@@ -101,6 +108,7 @@ try {
     <title>EduShare - Tableau de bord Étudiant</title>
     <link rel="stylesheet" href="../../assets/css/tabBordetudiant.css">
     <link rel="stylesheet" href="../../assets/css/commentaireetudiant.css">
+    
 </head>
 <body>
     <header>
@@ -164,7 +172,7 @@ try {
                             <div class="content">
                                 <span class="icon">
                                     <?php 
-                                    $extension = pathinfo($pub['contenu'], PATHINFO_EXTENSION);
+                                    $extension = $pub['file_extension'] ?? pathinfo($pub['contenu'], PATHINFO_EXTENSION);
                                     switch(strtolower($extension)) {
                                         case 'pdf': echo '📄'; break;
                                         case 'docx': echo '📝'; break;
@@ -208,7 +216,9 @@ try {
                                     </div>
                                 </div>
                             </div>
-                            <a href="../../includes/categorie/subcategory_publications.php?id=<?php echo $pub['id_pub']; ?>" class="view-btn">Voir</a>
+                            <div class="action-buttons">
+                                <a href="<?php echo htmlspecialchars($pub['contenu']); ?>" target="_blank" class="view-btn file-btn" onclick="console.log('Opening file:', '<?php echo $pub['contenu']; ?>')">Voir le fichier</a>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -246,21 +256,39 @@ try {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const pubId = link.getAttribute('data-pub-id');
-                    commentFrame.src = `../../includes/commentaire/commentaire.php?id_pub=${pubId}`;
+                    const iframeSrc = `../../includes/commentaire/commentaire.php?id_pub=${pubId}`;
+                    console.log('Opening comment modal, iframe src:', iframeSrc);
+                    commentFrame.src = iframeSrc;
                     modal.style.display = 'flex';
+                    commentFrame.onload = () => {
+                        console.log('Comment iframe loaded for pubId:', pubId);
+                    };
+                    commentFrame.onerror = () => {
+                        console.error('Error loading iframe:', iframeSrc);
+                        modal.querySelector('.modal-content').innerHTML += '<p style="color: red;">Erreur: Impossible de charger les commentaires.</p>';
+                    };
                 });
             });
 
             closeModal.addEventListener('click', () => {
+                console.log('Close modal clicked');
                 modal.style.display = 'none';
                 commentFrame.src = '';
             });
 
             modal.addEventListener('click', (e) => {
+                console.log('Modal clicked, target:', e.target.tagName, e.target.className);
                 if (e.target === modal) {
                     modal.style.display = 'none';
                     commentFrame.src = '';
                 }
+            });
+
+            // Gestion du clic sur l'iframe pour éviter de bloquer les clics
+            commentFrame.addEventListener('click', () => {
+                console.log('Iframe clicked, ensuring close button is accessible');
+                closeModal.style.pointerEvents = 'auto';
+                closeModal.style.zIndex = '2000';
             });
 
             // Gestion des étoiles pour la notation
@@ -270,7 +298,6 @@ try {
                 const noteInput = container.parentNode.querySelector('input[name="note"]');
                 const form = container.parentNode;
 
-                // Gestion du survol
                 stars.forEach(star => {
                     star.addEventListener('mouseover', () => {
                         const value = parseInt(star.getAttribute('data-value'));
@@ -287,7 +314,6 @@ try {
                         stars.forEach(s => s.classList.remove('preview'));
                     });
 
-                    // Gestion du clic
                     star.addEventListener('click', (e) => {
                         e.preventDefault();
                         const value = parseInt(star.getAttribute('data-value'));
@@ -300,15 +326,19 @@ try {
                                 s.classList.remove('filled', 'half');
                             }
                         });
+                        console.log('Submitting note:', value);
                         form.submit();
                     });
                 });
 
-                // Réinitialiser le survol quand la souris quitte le conteneur
                 container.addEventListener('mouseout', () => {
                     stars.forEach(s => s.classList.remove('preview'));
                 });
             });
+
+            // Log to confirm view buttons are rendered
+            const viewButtons = document.querySelectorAll('.view-btn.file-btn');
+            console.log('View file buttons rendered:', viewButtons.length);
         });
     </script>
 </body>
