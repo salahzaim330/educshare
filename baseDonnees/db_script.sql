@@ -39,18 +39,15 @@ CREATE TABLE Sous_categorie (
     FOREIGN KEY (id_enseignant) REFERENCES Enseignant(id)
 );
 
---Suivre_sous_categorie
-CREATE TABLE Suivre_sous_categorie(
+CREATE TABLE Suivre_sous_categorie (
     id INT PRIMARY KEY AUTO_INCREMENT,
     id_s_categorie INT,
     id_enseignant INT,
     id_etudiant INT,
-    FOREIGN KEY (id_enseignant) REFERENCES Sous_categorie (id_s_categorie),
+    FOREIGN KEY (id_s_categorie) REFERENCES Sous_categorie(id_s_categorie),
     FOREIGN KEY (id_enseignant) REFERENCES Enseignant(id),
     FOREIGN KEY (id_etudiant) REFERENCES Etudiant(id)
-
 );
-
 -- Table Publication (peut être créée par un étudiant ou un enseignant, et liée à une sous-catégorie)
 CREATE TABLE Publication (
     id_pub INT PRIMARY KEY AUTO_INCREMENT,
@@ -116,3 +113,6 @@ CREATE TABLE Note (
     FOREIGN KEY (id_pub) REFERENCES Publication(id_pub) ON DELETE CASCADE,
     CONSTRAINT unique_note UNIQUE (id_etudiant, id_enseignant, id_pub)
 );
+ALTER TABLE Notification
+ADD lu BOOLEAN DEFAULT FALSE,
+ADD type VARCHAR(50) DEFAULT 'publication';

@@ -53,40 +53,46 @@ try {
     
     $query = "
         SELECT 
-    p.id_pub, 
-    p.titre, 
-    p.description, 
-    p.date_pub, 
-    p.contenu, 
-    p.id_enseignant, 
-    p.id_s_categorie,
-    s.nom AS sous_categorie, 
-    c.nom AS categorie,
-    COALESCE(com.comment_count, 0) AS comment_count,
-    COALESCE(n.average_note, 0) AS average_note
-FROM Publication p
-JOIN Sous_categorie s ON p.id_s_categorie = s.id_s_categorie
-JOIN Categorie c ON s.id_categorie = c.id_categorie
-LEFT JOIN (
-    SELECT id_pub, COUNT(*) AS comment_count
-    FROM Commentaire
-    GROUP BY id_pub
-) com ON p.id_pub = com.id_pub
-LEFT JOIN (
-    SELECT id_pub, AVG(valeur) AS average_note
-    FROM Note
-    GROUP BY id_pub
-) n ON p.id_pub = n.id_pub
-WHERE p.id_enseignant = :enseignantId
-ORDER BY p.date_pub DESC;
-
+            p.id_pub, 
+            p.titre, 
+            p.description, 
+            p.date_pub, 
+            p.contenu, 
+            p.id_enseignant, 
+            p.id_s_categorie,
+            s.nom AS sous_categorie, 
+            c.nom AS categorie,
+            COALESCE(com.comment_count, 0) AS comment_count,
+            COALESCE(n.average_note, 0) AS average_note,
+            LOWER(SUBSTRING_INDEX(p.contenu, '.', -1)) AS file_extension
+        FROM Publication p
+        JOIN Sous_categorie s ON p.id_s_categorie = s.id_s_categorie
+        JOIN Categorie c ON s.id_categorie = c.id_categorie
+        LEFT JOIN (
+            SELECT id_pub, COUNT(*) AS comment_count
+            FROM Commentaire
+            GROUP BY id_pub
+        ) com ON p.id_pub = com.id_pub
+        LEFT JOIN (
+            SELECT id_pub, AVG(valeur) AS average_note
+            FROM Note
+            GROUP BY id_pub
+        ) n ON p.id_pub = n.id_pub
+        WHERE p.id_enseignant = :enseignantId
+        ORDER BY p.date_pub DESC
     ";
     
     $stmt = $connexion->prepare($query);
     $stmt->bindParam(':enseignantId', $enseignantId, PDO::PARAM_INT);
     $stmt->execute();
     $publications = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
+    // Ensure absolute URLs for contenu
+    foreach ($publications as &$pub) {
+        if (!empty($pub['contenu']) && !preg_match('#^https?://#', $pub['contenu'])) {
+            $pub['contenu'] = '/edushare/' . ltrim(str_replace('\\', '/', $pub['contenu']), '/');
+        }
+    }
 } catch (PDOException $e) {
     $publications = [];
     $_SESSION['error'] = "Erreur lors de la récupération des publications : " . $e->getMessage();
@@ -134,13 +140,20 @@ ORDER BY p.date_pub DESC;
         .icon {
             font-size: 2rem;
         }
-        .view-btn {
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
             align-self: center;
+        }
+        .view-btn {
             background: #10b981;
             color: white;
             padding: 0.5rem 1rem;
             border-radius: 4px;
             text-decoration: none;
+        }
+        .file-btn {
+            background: #4a90e2;
         }
         .comment-link {
             color: #3b82f6;
@@ -277,7 +290,7 @@ ORDER BY p.date_pub DESC;
                             <div class="content">
                                 <span class="icon">
                                     <?php 
-                                    $extension = pathinfo($pub['contenu'], PATHINFO_EXTENSION);
+                                    $extension = $pub['file_extension'] ?? pathinfo($pub['contenu'], PATHINFO_EXTENSION);
                                     switch(strtolower($extension)) {
                                         case 'pdf': echo '📄'; break;
                                         case 'docx': echo '📝'; break;
@@ -324,7 +337,10 @@ ORDER BY p.date_pub DESC;
                                     </div>
                                 </div>
                             </div>
-                            <a href="../../includes/categorie/subcategory_publications.php?id=<?php echo $pub['id_pub']; ?>" class="view-btn">Voir</a>
+                            <div class="action-buttons">
+                            
+                                <a href="<?php echo htmlspecialchars($pub['contenu']); ?>" target="_blank" class="view-btn file-btn" onclick="console.log('Opening file:', '<?php echo $pub['contenu']; ?>')">Voir le fichier</a>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -387,6 +403,12 @@ ORDER BY p.date_pub DESC;
                     }
                 });
             });
+
+            // Log to confirm view and file buttons are rendered
+            const viewButtons = document.querySelectorAll('.view-btn:not(.file-btn)');
+            const fileButtons = document.querySelectorAll('.view-btn.file-btn');
+            console.log('View buttons rendered:', viewButtons.length);
+            console.log('View file buttons rendered:', fileButtons.length);
         });
     </script>
 </body>
