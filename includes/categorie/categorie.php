@@ -219,7 +219,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             return (
                 <header className="bg-white border-b p-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <span className="menu-icon text-2xl">☰</span>
                         <a href={dashboard} className="text-xl font-bold">EduShare</a>
                     </div>
                     <nav className="flex gap-4">

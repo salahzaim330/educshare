@@ -136,13 +136,6 @@ try {
                 <li><a href="../../includes/publier/publier.php"><span>⬆</span> Publier</a></li>
                 <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>
             </ul>
-            <h3>Catégories</h3>
-            <ul class="categories">
-                <li><span>Mathématiques</span><span class="count">12</span></li>
-                <li><span>Physique</span><span class="count">8</span></li>
-                <li><span>Informatique</span><span class="count">15</span></li>
-            </ul>
-            <a href="categories.php" class="see-all">Voir toutes les catégories</a>
         </aside>
 
         <main>
@@ -210,8 +203,10 @@ try {
                                                     >★</span>
                                                 <?php endfor; ?>
                                             </div>
+                                            <span>(<?php echo number_format($note, 1); ?>)</span>
+                                            <br>
                                         </form>
-                                        <span>(<?php echo number_format($note, 1); ?>)</span>
+                                       
                                         <span>• <a href="#" class="comment-link" data-pub-id="<?php echo $pub['id_pub']; ?>"><?php echo $pub['comment_count']; ?> commentaires</a></span>
                                     </div>
                                 </div>

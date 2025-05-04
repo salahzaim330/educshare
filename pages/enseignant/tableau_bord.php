@@ -106,126 +106,7 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EduShare - Tableau de bord Enseignant</title>
     <link rel="stylesheet" href="../../assets/css/tabBordenseignant.css">
-    <style>
-        .resource-card {
-            background: white;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .no-publications {
-            text-align: center;
-            padding: 2rem;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-top: 1rem;
-        }
-        .publish-btn {
-            display: inline-block;
-            background: #3b82f6;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            text-decoration: none;
-            margin-top: 1rem;
-        }
-        .content {
-            display: flex;
-            gap: 1rem;
-            flex-grow: 1;
-        }
-        .icon {
-            font-size: 2rem;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-            align-self: center;
-        }
-        .view-btn {
-            background: #10b981;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            text-decoration: none;
-        }
-        .file-btn {
-            background: #4a90e2;
-        }
-        .comment-link {
-            color: #3b82f6;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .comment-link:hover {
-            text-decoration: underline;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 700px;
-            height: 80%;
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-        }
-        .modal-content iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        .close-modal {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #333;
-        }
-        .star {
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: #e5e7eb;
-        }
-        .star.filled {
-            color: #f59e0b;
-        }
-        .star.half {
-            background: linear-gradient(90deg, #f59e0b 50%, #e5e7eb 50%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        .star:hover {
-            color: #d1d5db;
-        }
-        .stars-container:hover .star {
-            color: #e5e7eb;
-        }
-        .stars-container .star:hover,
-        .stars-container .star:hover ~ .star {
-            color: #f59e0b;
-        }
-        .success-message {
-            color: green;
-            margin-bottom: 1rem;
-        }
-    </style>
+   
 </head>
 <body>
     <header>
@@ -254,13 +135,6 @@ try {
                 <li><a href="../../includes/publier/publier.php"><span>⬆</span> Publier</a></li>
                 <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>
             </ul>
-            <h3>Catégories</h3>
-            <ul class="categories">
-                <li><span>Mathématiques</span><span class="count">12</span></li>
-                <li><span>Physique</span><span class="count">8</span></li>
-                <li><span>Informatique</span><span class="count">15</span></li>
-            </ul>
-            <a href="categorie.html" class="see-all">Voir toutes les catégories</a>
         </aside>
 
         <main>
@@ -327,12 +201,10 @@ try {
                                                     >★</span>
                                                 <?php endfor; ?>
                                                 <input type="hidden" name="note" value="">
-                                            </div>
-                                            <span>(<?php echo number_format($note, 1); ?>)</span>
-                                        </form>
-                                        <?php if (isset($pub['download_count'])): ?>
-                                            <span>• <?php echo $pub['download_count']; ?> téléchargements</span>
-                                        <?php endif; ?>
+                                           
+                                            <span>(<?php echo number_format($note, 1); ?>)</span> 
+                                        </div>
+                                    </form>
                                         <span>• <a href="#" class="comment-link" data-pub-id="<?php echo $pub['id_pub']; ?>"><?php echo $pub['comment_count']; ?> commentaire(s)</a></span>
                                     </div>
                                 </div>
