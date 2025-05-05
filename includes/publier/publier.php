@@ -142,30 +142,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id_etudiant = $_SESSION['user_type'] === 'etudiant' ? $_SESSION['id'] : null;
     $id_enseignant = $_SESSION['user_type'] === 'enseignant' ? $_SESSION['id'] : null;
 
-    // Insert publication
+    // Insert publication and notifications
     try {
+        // Start transaction
+        $connexion->beginTransaction();
+
+        // Insert publication
         $stmt = $connexion->prepare("
-            INSERT INTO publication 
+            INSERT INTO Publication 
             (titre, date_pub, contenu, description, id_enseignant, id_etudiant, id_s_categorie)
             VALUES (:titre, NOW(), :contenu, :description, :id_enseignant, :id_etudiant, :id_s_categorie)
         ");
         $stmt->execute([
             'titre' => $titre,
-            'contenu' => $relative_path, // Store relative path
+            'contenu' => $relative_path,
             'description' => $description,
             'id_enseignant' => $id_enseignant,
             'id_etudiant' => $id_etudiant,
             'id_s_categorie' => $id_sous_categorie
         ]);
+        $id_pub = $connexion->lastInsertId();
 
-        $_SESSION['success'] = "Publication réussie !";
+        // Fetch followers of the subcategory
+        $stmt = $connexion->prepare("
+            SELECT id_enseignant, id_etudiant
+            FROM Suivre_sous_categorie
+            WHERE id_s_categorie = :id_s_categorie
+        ");
+        $stmt->execute([':id_s_categorie' => $id_sous_categorie]);
+        $followers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Insert notifications for each follower
+        foreach ($followers as $follower) {
+            $contenu_notif = "Nouvelle publication dans la sous-catégorie : " . htmlspecialchars($titre);
+            $stmt = $connexion->prepare("
+                INSERT INTO Notification 
+                (contenu, date_notif, id_etudiant, id_enseignant, id_pub, status)
+                VALUES (:contenu, CURDATE(), :id_etudiant, :id_enseignant, :id_pub, 'unread')
+            ");
+            $stmt->execute([
+                ':contenu' => $contenu_notif,
+                ':id_etudiant' => $follower['id_etudiant'],
+                ':id_enseignant' => $follower['id_enseignant'],
+                ':id_pub' => $id_pub
+            ]);
+        }
+
+        // Commit transaction
+        $connexion->commit();
+
+        $_SESSION['success'] = "Publication réussie et notifications envoyées !";
         header("Location: $dashboard");
         exit();
     } catch (PDOException $e) {
-        // Delete uploaded file if database insertion fails
+        // Rollback transaction and delete uploaded file
+        $connexion->rollBack();
         if (file_exists($dest)) {
             unlink($dest);
         }
+        error_log("Erreur lors de la publication: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
         $_SESSION['error'] = "Erreur de base de données : " . $e->getMessage();
         header("Location: publier.php");
         exit();
@@ -210,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <a href="categories.php" className="text-gray-700 hover:font-bold">Catégories</a>
                 </nav>
                 <div className="flex items-center gap-2">
-                    <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>
+                    <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">0</span>
                     <span className="font-bold">{userName}</span>
                     <span className="text-gray-500">{userType}</span>
                 </div>
@@ -231,7 +266,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const [file, setFile] = React.useState(null);
         const [fileName, setFileName] = React.useState('Aucun fichier sélectionné');
         const [isSubmitting, setIsSubmitting] = React.useState(false);
-        const [error, setError] = React.useState('');
+        const [error, setError] = React.useState(<?php echo json_encode($_SESSION['error'] ?? ''); ?>);
+        const [success, setSuccess] = React.useState(<?php echo json_encode($_SESSION['success'] ?? ''); ?>);
+
+        // Clear session messages
+        <?php unset($_SESSION['error'], $_SESSION['success']); ?>
 
         // Update subcategory when category changes
         React.useEffect(() => {
@@ -296,6 +335,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     {error && (
                         <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
                             {error}
+                        </div>
+                    )}
+                    {success && (
+                        <div className="bg-green-100 text-green-700 p-4 rounded mb-4">
+                            {success}
                         </div>
                     )}
                     <div className="bg-white border border-gray-300 rounded-md p-4">
@@ -427,7 +471,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
     };
 
-    // Render the App (using ReactDOM.render instead of createRoot for UMD version)
+    // Render the App
     ReactDOM.render(<App />, document.getElementById('root'));
 </script>
 </body>

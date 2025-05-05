@@ -48,6 +48,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_note'])) {
     exit();
 }
 
+// Gérer le marquage des notifications comme lues
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_notification_read'])) {
+    $notificationId = filter_input(INPUT_POST, 'notification_id', FILTER_VALIDATE_INT);
+    if ($notificationId) {
+        try {
+            $stmt = $connexion->prepare("UPDATE Notification SET status = 'read' WHERE id_notification = :id_notification AND id_etudiant = :id_etudiant");
+            $stmt->execute([':id_notification' => $notificationId, ':id_etudiant' => $_SESSION['id']]);
+        } catch (PDOException $e) {
+            error_log("Erreur mise à jour notification: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+        }
+    }
+    header("Location: tableau_bord.php");
+    exit();
+}
+
 // Récupérer les publications de l'étudiant connecté
 try {
     $etudiantId = $_SESSION['id'];
@@ -93,10 +108,33 @@ try {
             $pub['contenu'] = '/edushare/' . ltrim(str_replace('\\', '/', $pub['contenu']), '/');
         }
     }
+
+    // Récupérer les notifications
+    $stmt = $connexion->prepare("
+        SELECT n.id_notification, n.contenu, n.date_notif, n.status, p.titre AS publication_titre
+        FROM Notification n
+        JOIN Publication p ON n.id_pub = p.id_pub
+        WHERE n.id_etudiant = :id_etudiant
+        ORDER BY n.date_notif DESC
+        LIMIT 10
+    ");
+    $stmt->execute([':id_etudiant' => $etudiantId]);
+    $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Compter les notifications non lues
+    $stmt = $connexion->prepare("
+        SELECT COUNT(*) AS unread_count
+        FROM Notification
+        WHERE id_etudiant = :id_etudiant AND status = 'unread'
+    ");
+    $stmt->execute([':id_etudiant' => $etudiantId]);
+    $unread_count = $stmt->fetch(PDO::FETCH_ASSOC)['unread_count'];
 } catch (PDOException $e) {
-    error_log("Erreur récupération publications: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
+    error_log("Erreur récupération données: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
     $publications = [];
-    $_SESSION['error'] = "Erreur lors de la récupération des publications.";
+    $notifications = [];
+    $unread_count = 0;
+    $_SESSION['error'] = "Erreur lors de la récupération des données.";
 }
 ?>
 
@@ -108,7 +146,7 @@ try {
     <title>EduShare - Tableau de bord Étudiant</title>
     <link rel="stylesheet" href="../../assets/css/tabBordetudiant.css">
     <link rel="stylesheet" href="../../assets/css/commentaireetudiant.css">
-    
+    <link rel="stylesheet" href="../../assets/css/styles.css">
 </head>
 <body>
     <header>
@@ -120,7 +158,7 @@ try {
             <a href="../../includes/categorie/categorie.php">Catégories</a>
         </nav>
         <div class="user-profile">
-            <span class="notification">0</span>
+            <span class="notification"><?php echo $unread_count; ?></span>
             <div style="width: 32px; height: 32px; background-color: #e5e7eb; border-radius: 50%;"></div>
             <span class="user-name"><?php echo htmlspecialchars($_SESSION['prenom'] . ' ' . $_SESSION['username']); ?></span>
             <span class="user-role"><?php echo htmlspecialchars($_SESSION['user_type']); ?></span>
@@ -132,6 +170,7 @@ try {
             <h2> ☰ Menu</h2>
             <ul>
                 <li><a href="tableau_bord.php" class="active"><span>📊</span> Tableau de bord</a></li>
+                <li><a href="notifications.php"><span>🔔</span> Notifications <span class="notification"><?php echo $unread_count; ?></span></a></li>
                 <li><a href="profile.php"><span>👤</span> Profil</a></li>
                 <li><a href="../../includes/publier/publier.php"><span>⬆</span> Publier</a></li>
                 <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>
@@ -139,7 +178,8 @@ try {
         </aside>
 
         <main>
-            <h1>Mes Publications</h1>
+            <h1>Tableau de bord</h1>
+           
             <div class="tabs-container">
                 <nav class="tabs">
                     <a href="#" class="active"><strong>Mes publications</strong></a>
@@ -206,7 +246,6 @@ try {
                                             <span>(<?php echo number_format($note, 1); ?>)</span>
                                             <br>
                                         </form>
-                                       
                                         <span>• <a href="#" class="comment-link" data-pub-id="<?php echo $pub['id_pub']; ?>"><?php echo $pub['comment_count']; ?> commentaires</a></span>
                                     </div>
                                 </div>
