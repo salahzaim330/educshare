@@ -198,7 +198,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['change_password'])) {
             <a href="../../includes/categorie/categorie.php">Catégories</a>
         </nav>
         <div class="user-profile">
-            <span class="notification">3</span>
+            <span class="notification">0</span>
             <div style="width: 32px; height: 32px; background-color: #e5e7eb; border-radius: 50%;"></div>
             <span class="user-name"><?php echo htmlspecialchars($_SESSION['prenom']. ' '.$_SESSION['username']) ?></span>
             <span class="user-role"><?php echo htmlspecialchars($_SESSION['user_type']) ?></span>     

@@ -225,11 +225,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <a href={dashboard} className="text-gray-700 hover:font-bold">Tableau de bord</a>
                         <a href="./categorie.php" className="text-gray-700 font-bold">Catégories</a>
                         {userType === 'enseignant' && (
-                            <a href="/edushare/includes/gestion/gestion.php" className="text-gray-700 hover:font-bold">Gestion</a>
+                            <a href="../gestion/gestion.php" className="text-gray-700 hover:font-bold">Gestion</a>
                         )}
                     </nav>
                     <div className="flex items-center gap-2">
-                        <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>
+                        <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">0</span>
                         <span className="font-bold">{userName}</span>
                         <span className="text-gray-500">{userType}</span>
                     </div>
@@ -278,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (window.confirm(`Ne plus suivre la sous-catégorie "${sous_categorie}" ?`)) {
                     const form = document.createElement('form');
                     form.method = 'POST';
-                    form.action = './categorie.php';
+                    form.action = 'categorie.php';
                     form.innerHTML = `
                         <input type="hidden" name="action" value="unfollow">
                         <input type="hidden" name="id_s_categorie" value="${id_s_categorie}">
