@@ -194,8 +194,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['change_password'])) {
             <span>EduShare</span>
         </div>
         <nav>
-            <a href="tableau_bord_enseignant.php">Tableau de bord</a>
-            <a href="categorie.html">Catégories</a>
+            <a href="tableau_bord.php">Tableau de bord</a>
+            <a href="../../includes/categorie/categorie.php">Catégories</a>
         </nav>
         <div class="user-profile">
             <span class="notification">3</span>
@@ -209,7 +209,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['change_password'])) {
         <aside>
             <h2> ☰ Menu</h2>
             <ul>
-                <li><a href="../enseignant/tableau_bord.php"><span>📊</span> Tableau de bord</a></li>
+                <li><a href="tableau_bord.php"><span>📊</span> Tableau de bord</a></li>
                 <li><a href="profile.php" class="active"><span>👤</span> Profil</a></li>
                 <li><a href="../../includes/publier/publier.php"><span>⬆</span> Publier</a></li>
                 <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>
@@ -243,12 +243,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['change_password'])) {
                         <div class="form-group">
                             <label for="niveau_etude">Niveau d'étude</label>
                             <select id="niveau_etude" name="niveau_etude">
-                                <option value="Licence 1" <?php if($user_data['niveau_etude'] == 'Licence 1') echo 'selected'; ?>>Licence 1</option>
-                                <option value="Licence 2" <?php if($user_data['niveau_etude'] == 'Licence 2') echo 'selected'; ?>>Licence 2</option>
-                                <option value="Licence 3" <?php if($user_data['niveau_etude'] == 'Licence 3') echo 'selected'; ?>>Licence 3</option>
-                                <option value="Master 1" <?php if($user_data['niveau_etude'] == 'Master 1') echo 'selected'; ?>>Master 1</option>
-                                <option value="Master 2" <?php if($user_data['niveau_etude'] == 'Master 2') echo 'selected'; ?>>Master 2</option>
-                                <option value="Doctorat" <?php if($user_data['niveau_etude'] == 'Doctorat') echo 'selected'; ?>>Doctorat</option>
+                                <option value="Classe preparatoir 1 (CP1)" <?php if($user_data['niveau_etude'] == 'Classe preparatoir 1 (CP1)') echo 'selected'; ?>>Classe preparatoir 1 (CP1)</option>
+                                <option value="Classe preparatoir 2 (CP2)" <?php if($user_data['niveau_etude'] == 'Classe preparatoir 2 (CP2)') echo 'selected'; ?>>Classe preparatoir 2 (CP2)</option>
+                                <option value="2ITE" <?php if($user_data['niveau_etude'] == '2ITE') echo 'selected'; ?>>2ITE</option>
+                                <option value="CCN" <?php if($user_data['niveau_etude'] == 'CCN') echo 'selected'; ?>>CCN</option>
+                                <option value="ISIC" <?php if($user_data['niveau_etude'] == 'ISIC') echo 'selected'; ?>> ISIC</option>
+                               
                             </select>
                         </div>
                         <button type="submit" name="update_profile" class="btn">Mettre à jour</button>
