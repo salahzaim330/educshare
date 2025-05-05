@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once '../../auth/db.php';
-require '../../auth/auth.php';
+require_once '../../auth/auth.php';
 
 // Vérifier que l'utilisateur est connecté et est un enseignant
 if (!isset($_SESSION['id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'enseignant') {
@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_note'])) {
                 ]);
                 $_SESSION['success'] = "Note enregistrée avec succès.";
             } catch (PDOException $e) {
+                error_log("Erreur enregistrement note: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
                 $_SESSION['error'] = "Erreur lors de l'enregistrement de la note : " . $e->getMessage();
             }
         } else {
@@ -47,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_note'])) {
     exit();
 }
 
-// Récupérer les publications de l'enseignant connecté avec le nombre de commentaires et la moyenne des notes
+// Récupérer les publications de l'enseignant connecté et le nombre de notifications non lues
 try {
     $enseignantId = $_SESSION['id'];
     
@@ -93,9 +94,20 @@ try {
             $pub['contenu'] = '/edushare/' . ltrim(str_replace('\\', '/', $pub['contenu']), '/');
         }
     }
+
+    // Compter les notifications non lues
+    $stmt = $connexion->prepare("
+        SELECT COUNT(*) AS unread_count
+        FROM Notification
+        WHERE id_enseignant = :id_enseignant AND status = 'unread'
+    ");
+    $stmt->execute([':id_enseignant' => $enseignantId]);
+    $unread_count = $stmt->fetch(PDO::FETCH_ASSOC)['unread_count'];
 } catch (PDOException $e) {
+    error_log("Erreur récupération données: " . $e->getMessage(), 3, __DIR__ . '/../../logs/errors.log');
     $publications = [];
-    $_SESSION['error'] = "Erreur lors de la récupération des publications : " . $e->getMessage();
+    $unread_count = 0;
+    $_SESSION['error'] = "Erreur lors de la récupération des données : " . $e->getMessage();
 }
 ?>
 
@@ -106,7 +118,7 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EduShare - Tableau de bord Enseignant</title>
     <link rel="stylesheet" href="../../assets/css/tabBordenseignant.css">
-   
+    <link rel="stylesheet" href="../../assets/css/styles.css">
 </head>
 <body>
     <header>
@@ -119,7 +131,7 @@ try {
             <a href="../../includes/gestion/gestion.php">Gestion</a>
         </nav>
         <div class="user-profile">
-            <span class="notification">3</span>
+            <span class="notification"><?php echo $unread_count; ?></span>
             <div style="width: 32px; height: 32px; background-color: #e5e7eb; border-radius: 50%;"></div>
             <span class="user-name"><?php echo htmlspecialchars($_SESSION['prenom'] . ' ' . $_SESSION['username']); ?></span>
             <span class="user-role"><?php echo htmlspecialchars($_SESSION['user_type']); ?></span>     
@@ -131,6 +143,7 @@ try {
             <h2> ☰ Menu</h2>
             <ul>
                 <li><a href="tableau_bord.php" class="active"><span>📊</span> Tableau de bord</a></li>
+                <li><a href="notifications.php"><span>🔔</span> Notifications <span class="notification"><?php echo $unread_count; ?></span></a></li>
                 <li><a href="profile.php"><span>👤</span> Profil</a></li>
                 <li><a href="../../includes/publier/publier.php"><span>⬆</span> Publier</a></li>
                 <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>
@@ -148,7 +161,7 @@ try {
 
             <div class="resources">
                 <?php if (isset($_SESSION['error'])): ?>
-                    <div style="color: red;"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
+                    <div class="error-message"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
                 <?php endif; ?>
                 <?php if (isset($_SESSION['success'])): ?>
                     <div class="success-message"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
@@ -188,6 +201,7 @@ try {
                                             <input type="hidden" name="id_pub" value="<?php echo $pub['id_pub']; ?>">
                                             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                                             <input type="hidden" name="submit_note" value="1">
+                                            <input type="hidden" name="note" value="">
                                             <div class="stars-container flex">
                                                 <?php
                                                 $note = $pub['average_note'] ?? 0;
@@ -197,20 +211,17 @@ try {
                                                 ?>
                                                     <span
                                                         class="star <?php echo $i <= $fullStars ? 'filled' : ($i === $fullStars + 1 && $hasHalfStar ? 'half' : ''); ?>"
-                                                        onclick="this.parentNode.parentNode.querySelector('input[name=note]').value=<?php echo $i; ?>; this.parentNode.parentNode.submit();"
+                                                        data-value="<?php echo $i; ?>"
                                                     >★</span>
                                                 <?php endfor; ?>
-                                                <input type="hidden" name="note" value="">
-                                           
-                                            <span>(<?php echo number_format($note, 1); ?>)</span> 
-                                        </div>
-                                    </form>
+                                            </div>
+                                            <span>(<?php echo number_format($note, 1); ?>)</span>
+                                        </form>
                                         <span>• <a href="#" class="comment-link" data-pub-id="<?php echo $pub['id_pub']; ?>"><?php echo $pub['comment_count']; ?> commentaire(s)</a></span>
                                     </div>
                                 </div>
                             </div>
                             <div class="action-buttons">
-                            
                                 <a href="<?php echo htmlspecialchars($pub['contenu']); ?>" target="_blank" class="view-btn file-btn" onclick="console.log('Opening file:', '<?php echo $pub['contenu']; ?>')">Voir le fichier</a>
                             </div>
                         </div>
@@ -267,12 +278,47 @@ try {
                 }
             });
 
-            // Confirmation avant suppression (si ajouté)
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    if (!confirm('Êtes-vous sûr de vouloir supprimer cette publication ?')) {
+            // Gestion des étoiles pour la notation
+            const starsContainers = document.querySelectorAll('.stars-container');
+            starsContainers.forEach(container => {
+                const stars = container.querySelectorAll('.star');
+                const noteInput = container.parentNode.querySelector('input[name="note"]');
+                const form = container.parentNode;
+
+                stars.forEach(star => {
+                    star.addEventListener('mouseover', () => {
+                        const value = parseInt(star.getAttribute('data-value'));
+                        stars.forEach((s, index) => {
+                            if (index < value) {
+                                s.classList.add('preview');
+                            } else {
+                                s.classList.remove('preview');
+                            }
+                        });
+                    });
+
+                    star.addEventListener('mouseout', () => {
+                        stars.forEach(s => s.classList.remove('preview'));
+                    });
+
+                    star.addEventListener('click', (e) => {
                         e.preventDefault();
-                    }
+                        const value = parseInt(star.getAttribute('data-value'));
+                        noteInput.value = value;
+                        stars.forEach((s, index) => {
+                            if (index < value) {
+                                s.classList.add('filled');
+                                s.classList.remove('half');
+                            } else {
+                                s.classList.remove('filled', 'half');
+                            }
+                        });
+                        form.submit();
+                    });
+                });
+
+                container.addEventListener('mouseout', () => {
+                    stars.forEach(s => s.classList.remove('preview'));
                 });
             });
 

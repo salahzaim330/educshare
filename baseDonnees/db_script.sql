@@ -113,6 +113,7 @@ CREATE TABLE Note (
     FOREIGN KEY (id_pub) REFERENCES Publication(id_pub) ON DELETE CASCADE,
     CONSTRAINT unique_note UNIQUE (id_etudiant, id_enseignant, id_pub)
 );
+
+
 ALTER TABLE Notification
-ADD lu BOOLEAN DEFAULT FALSE,
-ADD type VARCHAR(50) DEFAULT 'publication';
+ADD status ENUM('unread', 'read') DEFAULT 'unread' NOT NULL;
