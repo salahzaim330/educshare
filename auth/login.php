@@ -81,11 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <form action="login.php" method="post">
             <div class="form-group">
                 <label for="email">Adresse e-mail</label>
-                <input type="email" name="email" id="email" placeholder="hicham.chakir@exemple.com" required>
+                <input type="email" name="email" id="email" placeholder="abcd@exemple.com" required>
             </div>
             <div class="form-group">
                 <label for="password">Mot de passe</label>
-                <input type="password" name="password" id="password" required>
+                <input type="password" name="password" id="password" placeholder="mot de passe" required>
                 <a href="#" class="forgot-password">Mot de passe oublié ?</a>
             </div>  
 

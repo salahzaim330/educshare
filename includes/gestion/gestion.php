@@ -167,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
                                         <td><?php echo htmlspecialchars($cat['description']); ?></td>
                                         <td><?php echo htmlspecialchars($cat['enseignant_nom'] ?? 'Inconnu'); ?></td>
                                         <td>
-                                            <a href="./categorie.php?edit=<?php echo htmlspecialchars($cat['id_categorie']); ?>" class="btn btn-primary">Modifier</a>
+                                            <a href="./categorie.php?id=<?php echo htmlspecialchars($cat['id_categorie']); ?>" class="btn btn-primary">Modifier</a>
                                             <a href="../supprimer/supp_categorie.php?delete=<?php echo htmlspecialchars($cat['id_categorie']); ?>" class="btn btn-outline" onclick="return confirm('Voulez-vous supprimer cette catégorie ?')">Supprimer</a>
                                         </td>
                                     </tr>

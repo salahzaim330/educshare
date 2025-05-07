@@ -79,30 +79,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <!-- Contenu principal -->
     <div class="main-content">
         <div class="signup-form">
-            <h2>Créer un compte</h2>
+            <h2>Inscription</h2>
             <p>Rejoignez notre communauté éducative pour partager et découvrir des ressources pédagogiques.</p>
             <form action="signup.php" method="post">
             <div class="form-row">
                 <div class="form-group">
                     <label for="first-name">Prénom</label>
-                    <input type="text" name="prenom" id="first-name" placeholder="hicham" required>
+                    <input type="text" name="prenom" id="first-name" placeholder="prenom" required>
                 </div>
                 <div class="form-group">
                     <label for="last-name">Nom</label>
-                    <input type="text"name="nom"  id="last-name" placeholder="chakir" required>
+                    <input type="text"name="nom"  id="last-name" placeholder="nom" required>
                 </div>
             </div>
             <div class="form-group">
                 <label for="email">Adresse e-mail</label>
-                <input type="email" name="email" id="email" placeholder="hicham.chakir@exemple.com" required>
+                <input type="email" name="email" id="email" placeholder="abcd@exemple.com" required>
             </div>
             <div class="form-group">
                 <label for="password">Mot de passe</label>
-                <input type="password" name="password" id="password" required>
+                <input type="password" name="password" id="password" placeholder="mot de passe" required>
             </div>
             <div class="form-group">
                 <label for="confirm-password">Confirmer le mot de passe</label>
-                <input type="password" name="cpassword" id="confirm-password" required>
+                <input type="password" name="cpassword" id="confirm-password" placeholder="confirmer le mot de passe" required>
             </div>
             <div class="form-group">
                 <label for="study-level">Niveau d'étude</label>

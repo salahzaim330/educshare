@@ -331,7 +331,7 @@ try {
             return (
                 <header className="bg-white border-b p-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <span className="menu-icon text-2xl">☰</span>
+                      
                         <a href={dashboard} className="text-xl font-bold">EduShare</a>
                     </div>
                     <nav className="flex gap-4">
@@ -342,7 +342,7 @@ try {
                         )}
                     </nav>
                     <div className="flex items-center gap-2">
-                        <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">3</span>
+                        <span className="bg-green-500 text-white rounded-full px-2 py-1 text-sm">0</span>
                         <span className="font-bold">{userName}</span>
                         <span className="text-gray-500">{userType}</span>
                     </div>

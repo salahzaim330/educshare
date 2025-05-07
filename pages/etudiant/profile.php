@@ -207,9 +207,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['change_password'])) {
 
     <div class="container">
         <aside>
-            <h2> ☰ Menu</h2>
+            <h2>Menu</h2>
             <ul>
                 <li><a href="tableau_bord.php"><span>📊</span> Tableau de bord</a></li>
+                <li><a href="notifications.php"><span>🔔</span> Notifications <span>0</span></a></li>
                 <li><a href="profile.php" class="active"><span>👤</span> Profil</a></li>
                 <li><a href="../../includes/publier/publier.php"><span>⬆</span> Publier</a></li>
                 <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>

@@ -218,7 +218,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['change_password'])) {
         <nav>
             <a href="tableau_bord.php">Tableau de bord</a>
             <a href="../enseignant/categories.php">Catégories</a>
-            <a href="../enseignant/gestion.php">Gestion</a>
+            <a href="../../includes/gestion/gestion.php">Gestion</a>
         </nav>
         <div class="user-profile">
             <span class="notification">0</span>
@@ -233,9 +233,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['change_password'])) {
             <h2>☰ Menu</h2>
             <ul>
                 <li><a href="../enseignant/tableau_bord.php"><span>📊</span> Tableau de bord</a></li>
+                <li><a href="notifications.php"><span>🔔</span> Notifications <span >0</span></a></li>
                 <li><a href="profile.php" class="active"><span>👤</span> Profil</a></li>
                 <li><a href="../../includes/publier/publier.php"><span>⬆</span> Publier</a></li>
-                <li><a href="../enseignant/gestion.php"><span>⚙️</span> Gestion</a></li>
                 <li><a href="../../auth/deconnexion.php"><span>➡️</span> Déconnexion</a></li>
             </ul>
         </aside>

@@ -37,8 +37,3 @@ Le projet a été modélisé à l’aide d’UML, incluant :
 - Diagramme de séquence
 
 *(Les fichiers de modélisation sont disponibles dans le dossier `edushare\baseDonnees\diagrammes`)*
-
-
-
-
- 

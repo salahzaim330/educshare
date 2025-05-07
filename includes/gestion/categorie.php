@@ -255,7 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && $_PO
             <?php if (!empty($message)): ?>
                 <?php echo $message; ?>
             <?php endif; ?>
-            <form action="modifier_categorie.php?id=<?php echo htmlspecialchars($id_categorie); ?>" method="POST">
+            <form action="categorie.php?id=<?php echo htmlspecialchars($id_categorie); ?>" method="POST">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                 <input type="hidden" name="id_categorie" value="<?php echo htmlspecialchars($categorie['id_categorie']); ?>">
                 <div class="form-group">

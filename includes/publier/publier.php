@@ -29,7 +29,7 @@ try {
 
     $stmt = $connexion->query("
         SELECT s.id_s_categorie, s.nom AS sous_categorie, s.id_categorie
-        FROM sous_categorie s
+        FROM Sous_categorie s
         ORDER BY s.nom
     ");
     $subcategories = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -58,15 +58,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // Validate subcategory
+    // Validate subcategory and fetch its name
     try {
-        $stmt = $connexion->prepare("SELECT id_s_categorie FROM Sous_categorie WHERE id_s_categorie = :id");
+        $stmt = $connexion->prepare("SELECT id_s_categorie, nom FROM Sous_categorie WHERE id_s_categorie = :id");
         $stmt->execute(['id' => $id_sous_categorie]);
-        if (!$stmt->fetch()) {
+        $sous_categorie = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$sous_categorie) {
             $_SESSION['error'] = "Sous-catégorie invalide.";
             header("Location: publier.php");
             exit();
         }
+        $sous_categorie_nom = $sous_categorie['nom'];
     } catch (PDOException $e) {
         $_SESSION['error'] = "Erreur de base de données : " . $e->getMessage();
         header("Location: publier.php");
@@ -174,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Insert notifications for each follower
         foreach ($followers as $follower) {
-            $contenu_notif = "Nouvelle publication dans la sous-catégorie : " . htmlspecialchars($titre);
+            $contenu_notif = "Nouvelle publication dans la sous-catégorie : " . htmlspecialchars($sous_categorie_nom);
             $stmt = $connexion->prepare("
                 INSERT INTO Notification 
                 (contenu, date_notif, id_etudiant, id_enseignant, id_pub, status)
